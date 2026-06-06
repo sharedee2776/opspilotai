@@ -1,4 +1,4 @@
-# OpsPilot AI 🤖
+# OpsTrainAI 🤖
 
 **AI Alert Intelligence + Auto-Remediation Platform**
 
@@ -59,7 +59,7 @@ docker-compose down
 ## 📂 Project Structure
 
 ```
-opspilot-ai/
+opstrain-ai/
 ├── src/
 │   ├── main.ts              # Entry point
 │   ├── app.module.ts        # Root NestJS module
@@ -209,8 +209,8 @@ CI/CD notes:
 ### Docker
 
 ```bash
-docker build -f docker/Dockerfile -t opspilot .
-docker run -p 3000:3000 opspilot
+docker build -f docker/Dockerfile -t opstrain .
+docker run -p 3000:3000 opstrain
 ```
 
 ---
@@ -283,7 +283,7 @@ docker-compose logs postgres
 
 - **Issues**: GitHub Issues
 - **Questions**: Create a Discussion
-- **Email**: team@opspilot.ai
+- **Email**: team@opstrain.ai
 
 ---
 

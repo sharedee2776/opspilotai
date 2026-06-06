@@ -1,8 +1,8 @@
 {
-  "name": "opspilot-ai",
+  "name": "opstrain-ai",
   "version": "0.1.0",
   "description": "AI Alert Intelligence + Auto-Remediation Platform",
-  "author": "OpsPilot Team",
+  "author": "OpsTrain Team",
   "private": true,
   "license": "MIT",
   "scripts": {

@@ -18,7 +18,7 @@ In the Railway project settings, add the following environment variables (use va
 - `DB_PORT` = 5432
 - `DB_USERNAME` = provided by Railway Postgres
 - `DB_PASSWORD` = provided by Railway Postgres
-- `DB_NAME` = opspilot_dev (or the DB name Railway provides)
+- `DB_NAME` = opstrain_dev (or the DB name Railway provides)
 - `REDIS_HOST` = the Railway Redis host
 - `REDIS_PORT` = 6379
 - `REDIS_PASSWORD` = (if provided)

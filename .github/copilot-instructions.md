@@ -1,8 +1,8 @@
-# OpsPilot AI - Development Instructions for Copilot
+# OpsTrainAI - Development Instructions for Copilot
 
 ## 🎯 Project Overview
 
-**OpsPilot AI** is an AI-powered alert intelligence platform designed to reduce alert noise by 80-90% through:
+**OpsTrainAI** is an AI-powered alert intelligence platform designed to reduce alert noise by 80-90% through:
 - Alert deduplication & grouping
 - AI-powered root cause analysis
 - Automated fix suggestions
@@ -28,7 +28,7 @@
 ## 📁 Project Structure
 
 ```
-opspilot-ai/
+opstrain-ai/
 ├── src/
 │   ├── main.ts                # Entry point
 │   ├── app.module.ts          # Root NestJS module
@@ -250,8 +250,8 @@ Output JSON with: root_cause, confidence, explanation
 - [ ] Deploy
 
 **Docker:**
-- [ ] Build: `docker build -f docker/Dockerfile -t opspilot .`
-- [ ] Run: `docker run -p 3000:3000 opspilot`
+- [ ] Build: `docker build -f docker/Dockerfile -t opstrain .`
+- [ ] Run: `docker run -p 3000:3000 opstrain`
 
 ---
 
@@ -290,7 +290,7 @@ Output JSON with: root_cause, confidence, explanation
 ## 📞 Key Contacts
 
 - **Lead**: Your Name
-- **Slack Channel**: #opspilot-dev
+- **Slack Channel**: #opstrain-dev
 - **Status**: Track in GitHub Projects
 
 ---

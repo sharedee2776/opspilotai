@@ -1,4 +1,4 @@
-# 🎉 OpsPilot AI - Project Setup Complete
+# 🎉 OpsTrainAI - Project Setup Complete
 
 **Date**: May 25, 2026
 **Status**: ✅ Ready for Phase 1 Development
@@ -10,7 +10,7 @@
 
 ### 1. Project Structure ✅
 ```
-opspilot-ai/
+opstrain-ai/
 ├── src/
 │   ├── main.ts              ✅ Entry point
 │   └── app.module.ts        ✅ NestJS root module
@@ -184,8 +184,8 @@ npm run build
 npm start
 
 # Or with Docker:
-docker build -f docker/Dockerfile -t opspilot .
-docker run -p 3000:3000 opspilot
+docker build -f docker/Dockerfile -t opstrain .
+docker run -p 3000:3000 opstrain
 ```
 
 ### Deployment to Railway

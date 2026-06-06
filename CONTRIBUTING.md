@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for contributing to OpsPilot AI. Please follow these guidelines to keep the repository healthy and reviewable.
+Thanks for contributing to OpsTrainAI. Please follow these guidelines to keep the repository healthy and reviewable.
 
 Code style
 - Use TypeScript and follow existing patterns in `src/`.
@@ -35,4 +35,4 @@ Testing
 Security
 - Never commit `.env` or credentials. Use GitHub Secrets for CI/CD.
 
-Thank you for improving OpsPilot AI!
+Thank you for improving OpsTrainAI!
