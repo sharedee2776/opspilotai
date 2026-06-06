@@ -1,13 +1,23 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { QueueProducerService } from '../../core/queue/queue-producer.service';
 import { AlertsService } from './alerts.service';
 
 @Controller('alerts')
 export class AlertsController {
-  constructor(private readonly alertsService: AlertsService) {}
+  constructor(
+    private readonly alertsService: AlertsService,
+    private readonly queueProducer: QueueProducerService,
+  ) {}
 
   @Post()
+  @HttpCode(HttpStatus.ACCEPTED)
   async create(@Body() payload: any) {
-    return this.alertsService.create(payload);
+    const job = await this.queueProducer.enqueueAlert({ rawPayload: payload });
+    return {
+      status: 'queued',
+      jobId: job.id,
+      queue: job.queueName,
+    };
   }
 
   @Get()

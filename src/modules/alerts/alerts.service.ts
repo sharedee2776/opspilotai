@@ -1,12 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, Repository } from 'typeorm';
 import { AlertEntity, AlertSeverity, AlertSource, AlertStatus } from '../../common/entities/alert.entity';
 import { AlertNormalizerService } from './services/alert-normalizer.service';
 import { DeduplicationService } from './services/deduplication.service';
 
+export interface IngestAlertResult {
+  alert: AlertEntity | null;
+  duplicate: boolean;
+  service: string;
+}
+
 @Injectable()
 export class AlertsService {
+  private readonly logger = new Logger(AlertsService.name);
+
   constructor(
     @InjectRepository(AlertEntity)
     private readonly alertRepository: Repository<AlertEntity>,
@@ -14,14 +22,20 @@ export class AlertsService {
     private readonly deduplicationService: DeduplicationService,
   ) {}
 
-  async create(rawPayload: any): Promise<AlertEntity> {
+  async ingestAlert(rawPayload: any): Promise<IngestAlertResult> {
     const normalized = this.alertNormalizer.normalize(rawPayload);
     const dedupHash = this.deduplicationService.generateDedupHash(normalized);
+    const service = normalized.service;
+
+    if (await this.deduplicationService.isDuplicate(dedupHash)) {
+      this.logger.log(`Duplicate alert suppressed for service ${service}`);
+      return { alert: null, duplicate: true, service };
+    }
 
     const partialAlert: DeepPartial<AlertEntity> = {
       title: normalized.title,
       description: normalized.description,
-      service: normalized.service,
+      service,
       severity: normalized.severity as AlertSeverity,
       source: normalized.source as AlertSource,
       metadata: normalized.metadata,
@@ -29,8 +43,17 @@ export class AlertsService {
       status: AlertStatus.PENDING,
     };
 
-    const alert = this.alertRepository.create(partialAlert);
-    return this.alertRepository.save(alert as AlertEntity);
+    const alert = await this.alertRepository.save(this.alertRepository.create(partialAlert));
+    return { alert, duplicate: false, service };
+  }
+
+  /** @deprecated Prefer ingestAlert via queue for production ingress */
+  async create(rawPayload: any): Promise<AlertEntity> {
+    const result = await this.ingestAlert(rawPayload);
+    if (result.duplicate || !result.alert) {
+      throw new Error('Duplicate alert');
+    }
+    return result.alert;
   }
 
   async findAll(): Promise<AlertEntity[]> {

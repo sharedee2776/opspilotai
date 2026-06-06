@@ -1,0 +1,189 @@
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Worker } from 'bullmq';
+import { RedisService } from '../../redis/redis.service';
+import { AlertsService } from '../../../modules/alerts/alerts.service';
+import { IncidentBuilderService } from '../../../modules/incidents/services/incident-builder.service';
+import { IncidentsService } from '../../../modules/incidents/incidents.service';
+import { AiService } from '../../../modules/ai/ai.service';
+import { SlackNotificationService } from '../../../modules/slack/slack-notification.service';
+import {
+  JOB_ANALYZE_INCIDENT,
+  JOB_GROUP_INCIDENT,
+  JOB_PROCESS_ALERT,
+  QUEUE_AI_ANALYSIS,
+  QUEUE_ALERTS,
+  QUEUE_INCIDENTS,
+} from '../queue.constants';
+import {
+  AnalyzeIncidentJobPayload,
+  GroupIncidentJobPayload,
+  ProcessAlertJobPayload,
+} from '../queue.types';
+import { QueueProducerService } from '../queue-producer.service';
+
+@Injectable()
+export class AlertProcessor implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(AlertProcessor.name);
+  private worker: Worker | null = null;
+
+  constructor(
+    private readonly redisService: RedisService,
+    private readonly alertsService: AlertsService,
+    private readonly queueProducer: QueueProducerService,
+  ) {}
+
+  onModuleInit(): void {
+    this.worker = new Worker(
+      QUEUE_ALERTS,
+      async (job) => {
+        if (job.name !== JOB_PROCESS_ALERT) {
+          return;
+        }
+
+        const payload = job.data as ProcessAlertJobPayload;
+        const result = await this.alertsService.ingestAlert(payload.rawPayload);
+
+        if (result.duplicate) {
+          this.logger.log(`Skipped duplicate alert for service ${result.service}`);
+          return { duplicate: true, service: result.service };
+        }
+
+        await this.queueProducer.enqueueGroupIncident({
+          service: result.service,
+          slackReply: payload.slackReply,
+        });
+
+        return { duplicate: false, alertId: result.alert?.id, service: result.service };
+      },
+      { connection: this.redisService.getBullMqConnection() },
+    );
+
+    this.worker.on('failed', (job, error) => {
+      this.logger.error(`Alert job ${job?.id} failed: ${error.message}`);
+    });
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.worker?.close();
+  }
+}
+
+@Injectable()
+export class IncidentProcessor implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(IncidentProcessor.name);
+  private worker: Worker | null = null;
+
+  constructor(
+    private readonly redisService: RedisService,
+    private readonly config: ConfigService,
+    private readonly incidentBuilder: IncidentBuilderService,
+    private readonly queueProducer: QueueProducerService,
+  ) {}
+
+  onModuleInit(): void {
+    this.worker = new Worker(
+      QUEUE_INCIDENTS,
+      async (job) => {
+        if (job.name !== JOB_GROUP_INCIDENT) {
+          return;
+        }
+
+        const payload = job.data as GroupIncidentJobPayload;
+        const minAlerts = payload.minAlerts ?? Number(this.config.get<string>('MIN_ALERTS_TO_GROUP', '2'));
+        const incident = await this.incidentBuilder.createIncidentIfThresholdMet(payload.service, minAlerts);
+
+        if (!incident) {
+          this.logger.log(`Incident threshold not met for service ${payload.service}`);
+          return { incidentCreated: false, service: payload.service };
+        }
+
+        await this.queueProducer.enqueueAnalyzeIncident({
+          incidentId: incident.id,
+          slackReply: payload.slackReply,
+        });
+
+        return { incidentCreated: true, incidentId: incident.id, service: payload.service };
+      },
+      { connection: this.redisService.getBullMqConnection() },
+    );
+
+    this.worker.on('failed', (job, error) => {
+      this.logger.error(`Incident job ${job?.id} failed: ${error.message}`);
+    });
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.worker?.close();
+  }
+}
+
+@Injectable()
+export class AiAnalysisProcessor implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(AiAnalysisProcessor.name);
+  private worker: Worker | null = null;
+
+  constructor(
+    private readonly redisService: RedisService,
+    private readonly incidentsService: IncidentsService,
+    private readonly aiService: AiService,
+    private readonly slackNotification: SlackNotificationService,
+  ) {}
+
+  onModuleInit(): void {
+    this.worker = new Worker(
+      QUEUE_AI_ANALYSIS,
+      async (job) => {
+        if (job.name !== JOB_ANALYZE_INCIDENT) {
+          return;
+        }
+
+        const payload = job.data as AnalyzeIncidentJobPayload;
+        const incident = await this.incidentsService.findById(payload.incidentId);
+
+        if (!incident) {
+          throw new Error(`Incident ${payload.incidentId} not found`);
+        }
+
+        const alerts = incident.alerts?.length
+          ? incident.alerts
+          : await this.incidentsService.getAlertsForIncident(incident.id);
+
+        if (!alerts.length) {
+          throw new Error(`No alerts found for incident ${payload.incidentId}`);
+        }
+
+        const summary = await this.aiService.summarizeAlerts(alerts);
+        const rootCause = await this.aiService.analyzeRootCause(alerts);
+
+        await this.incidentsService.updateWithAiResults(
+          incident.id,
+          summary.summary,
+          rootCause.root_cause,
+          rootCause.confidence,
+        );
+
+        if (payload.slackReply?.channel) {
+          await this.slackNotification.postIncidentCreated({
+            channel: payload.slackReply.channel,
+            incident,
+            summary,
+            rootCause,
+            alertCount: alerts.length,
+          });
+        }
+
+        return { incidentId: incident.id, analyzed: true };
+      },
+      { connection: this.redisService.getBullMqConnection() },
+    );
+
+    this.worker.on('failed', (job, error) => {
+      this.logger.error(`AI analysis job ${job?.id} failed: ${error.message}`);
+    });
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.worker?.close();
+  }
+}

@@ -10,6 +10,6 @@ import { AlertNormalizerService } from './services/alert-normalizer.service';
   imports: [TypeOrmModule.forFeature([AlertEntity])],
   controllers: [AlertsController],
   providers: [AlertsService, DeduplicationService, AlertNormalizerService],
-  exports: [AlertsService],
+  exports: [AlertsService, DeduplicationService, AlertNormalizerService],
 })
 export class AlertsModule {}

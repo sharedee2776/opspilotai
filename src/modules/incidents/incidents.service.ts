@@ -82,4 +82,11 @@ export class IncidentsService {
     incident.rootCause = `${rootCause} (confidence: ${confidence})`;
     return this.incidentRepository.save(incident);
   }
+
+  async getAlertsForIncident(incidentId: string): Promise<AlertEntity[]> {
+    return this.alertRepository.find({
+      where: { incident: { id: incidentId } },
+      order: { createdAt: 'ASC' },
+    });
+  }
 }
