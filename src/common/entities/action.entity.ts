@@ -1,5 +1,6 @@
 import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { IncidentEntity } from './incident.entity';
+import { OrganizationEntity } from './organization.entity';
 
 export enum ActionStatus {
   SUGGESTED = 'suggested',
@@ -13,6 +14,9 @@ export enum ActionStatus {
 export class ActionEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ type: 'uuid' })
+  organizationId: string;
 
   @Column({ nullable: false })
   name: string;
@@ -32,6 +36,9 @@ export class ActionEntity {
 
   @Column({ nullable: true })
   riskLevel: string;
+
+  @ManyToOne(() => OrganizationEntity, { onDelete: 'CASCADE' })
+  organization: OrganizationEntity;
 
   @ManyToOne(() => IncidentEntity, (incident) => incident.actions, {
     onDelete: 'CASCADE',

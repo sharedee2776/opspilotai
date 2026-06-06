@@ -45,7 +45,9 @@ export class QueueProducerService implements OnModuleDestroy {
 
   async enqueueAlert(payload: ProcessAlertJobPayload) {
     const job = await this.alertQueue.add(JOB_PROCESS_ALERT, payload, DEFAULT_JOB_OPTIONS);
-    this.logger.log(`Enqueued alert job ${job.id} for service ${String(payload.rawPayload.service ?? 'unknown')}`);
+    this.logger.log(
+      `Enqueued alert job ${job.id} for org ${payload.organizationId} service ${String(payload.rawPayload.service ?? 'unknown')}`,
+    );
     return job;
   }
 

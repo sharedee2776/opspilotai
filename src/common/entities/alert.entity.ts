@@ -1,5 +1,6 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { IncidentEntity } from './incident.entity';
+import { OrganizationEntity } from './organization.entity';
 
 export enum AlertSeverity {
   LOW = 'low',
@@ -21,9 +22,17 @@ export enum AlertSource {
 }
 
 @Entity('alerts')
+@Index(['organizationId', 'dedupHash', 'createdAt'])
+@Index(['organizationId', 'service', 'status'])
 export class AlertEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ type: 'uuid' })
+  organizationId: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  integrationId?: string | null;
 
   @Column({ nullable: false })
   title: string;
@@ -60,6 +69,9 @@ export class AlertEntity {
 
   @Column({ type: 'jsonb', default: {} })
   metadata: Record<string, any>;
+
+  @ManyToOne(() => OrganizationEntity, { onDelete: 'CASCADE' })
+  organization: OrganizationEntity;
 
   @ManyToOne(() => IncidentEntity, (incident) => incident.alerts, {
     nullable: true,

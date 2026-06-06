@@ -9,6 +9,7 @@ import { OrganizationEntity } from '../../common/entities/organization.entity';
 import { OrganizationMemberEntity } from '../../common/entities/organization-member.entity';
 import { TeamEntity } from '../../common/entities/team.entity';
 import { TeamMemberEntity } from '../../common/entities/team-member.entity';
+import { IntegrationEntity } from '../../common/entities/integration.entity';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { TeamMemberEntity } from '../../common/entities/team-member.entity';
           OrganizationMemberEntity,
           TeamEntity,
           TeamMemberEntity,
+          IntegrationEntity,
         ];
         const common = {
           entities,

@@ -15,8 +15,8 @@ export class DeduplicationService {
     private readonly alertRepository: Repository<AlertEntity>,
   ) {}
 
-  generateDedupHash(payload: Record<string, any>): string {
-    const normalized = `${String(payload.service || '').trim().toLowerCase()}:${String(
+  generateDedupHash(payload: Record<string, any>, organizationId: string): string {
+    const normalized = `${organizationId}:${String(payload.service || '').trim().toLowerCase()}:${String(
       payload.title || '',
     )
       .trim()
@@ -25,22 +25,23 @@ export class DeduplicationService {
     return createHash('sha256').update(normalized).digest('hex');
   }
 
-  async isDuplicate(dedupHash: string): Promise<boolean> {
+  async isDuplicate(dedupHash: string, organizationId: string): Promise<boolean> {
     const windowMinutes = Number(this.config.get<string>('ALERT_DEDUP_WINDOW_MINUTES', '5'));
     const ttlSeconds = windowMinutes * 60;
     const since = new Date(Date.now() - ttlSeconds * 1000);
 
     const existing = await this.alertRepository.findOne({
-      where: { dedupHash, createdAt: MoreThan(since) },
+      where: { dedupHash, organizationId, createdAt: MoreThan(since) },
     });
     if (existing) {
       return true;
     }
 
-    const acquired = await this.redisService.getClient().set(`dedup:${dedupHash}`, '1', {
-      EX: ttlSeconds,
-      NX: true,
-    });
+    const acquired = await this.redisService.getClient().set(
+      `dedup:${organizationId}:${dedupHash}`,
+      '1',
+      { EX: ttlSeconds, NX: true },
+    );
 
     return acquired === null;
   }

@@ -1,6 +1,16 @@
-import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { AlertEntity } from './alert.entity';
 import { ActionEntity } from './action.entity';
+import { OrganizationEntity } from './organization.entity';
 
 export enum IncidentStatus {
   ACTIVE = 'active',
@@ -9,9 +19,13 @@ export enum IncidentStatus {
 }
 
 @Entity('incidents')
+@Index(['organizationId', 'service', 'status'])
 export class IncidentEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ type: 'uuid' })
+  organizationId: string;
 
   @Column({ nullable: false })
   title: string;
@@ -43,6 +57,9 @@ export class IncidentEntity {
 
   @Column({ nullable: true })
   slackMessageTs: string;
+
+  @ManyToOne(() => OrganizationEntity, { onDelete: 'CASCADE' })
+  organization: OrganizationEntity;
 
   @OneToMany(() => AlertEntity, (alert) => alert.incident)
   alerts: AlertEntity[];

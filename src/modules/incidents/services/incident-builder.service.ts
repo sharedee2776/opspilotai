@@ -14,10 +14,12 @@ export class IncidentBuilderService {
   ) {}
 
   async createIncidentForService(
+    organizationId: string,
     service: string,
     alerts: AlertEntity[],
   ): Promise<IncidentEntity> {
     const incident = this.incidentRepository.create({
+      organizationId,
       title: `${service} incident`,
       summary: `Grouped ${alerts.length} alerts for ${service}`,
       service,
@@ -37,37 +39,26 @@ export class IncidentBuilderService {
     return savedIncident;
   }
 
-  async findPendingAlertsByService(): Promise<Record<string, AlertEntity[]>> {
-    const alerts = await this.alertRepository.find({
-      where: { status: AlertStatus.PENDING },
-    });
-
-    return alerts.reduce((acc, alert) => {
-      const key = alert.service || 'unknown';
-      if (!acc[key]) {
-        acc[key] = [];
-      }
-      acc[key].push(alert);
-      return acc;
-    }, {} as Record<string, AlertEntity[]>);
-  }
-
-  async findPendingAlertsForService(service: string): Promise<AlertEntity[]> {
+  async findPendingAlertsForService(
+    organizationId: string,
+    service: string,
+  ): Promise<AlertEntity[]> {
     return this.alertRepository.find({
-      where: { status: AlertStatus.PENDING, service },
+      where: { organizationId, status: AlertStatus.PENDING, service },
       order: { createdAt: 'ASC' },
     });
   }
 
   async createIncidentIfThresholdMet(
+    organizationId: string,
     service: string,
     minAlerts: number,
   ): Promise<IncidentEntity | null> {
-    const pendingAlerts = await this.findPendingAlertsForService(service);
+    const pendingAlerts = await this.findPendingAlertsForService(organizationId, service);
     if (pendingAlerts.length < minAlerts) {
       return null;
     }
 
-    return this.createIncidentForService(service, pendingAlerts);
+    return this.createIncidentForService(organizationId, service, pendingAlerts);
   }
 }

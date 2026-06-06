@@ -42,19 +42,31 @@ export class AlertProcessor implements OnModuleInit, OnModuleDestroy {
         }
 
         const payload = job.data as ProcessAlertJobPayload;
-        const result = await this.alertsService.ingestAlert(payload.rawPayload);
+        const result = await this.alertsService.ingestAlert({
+          organizationId: payload.organizationId,
+          integrationId: payload.integrationId,
+          rawPayload: payload.rawPayload,
+        });
 
         if (result.duplicate) {
-          this.logger.log(`Skipped duplicate alert for service ${result.service}`);
-          return { duplicate: true, service: result.service };
+          this.logger.log(
+            `Skipped duplicate alert for org ${payload.organizationId} service ${result.service}`,
+          );
+          return { duplicate: true, service: result.service, organizationId: payload.organizationId };
         }
 
         await this.queueProducer.enqueueGroupIncident({
+          organizationId: payload.organizationId,
           service: result.service,
           slackReply: payload.slackReply,
         });
 
-        return { duplicate: false, alertId: result.alert?.id, service: result.service };
+        return {
+          duplicate: false,
+          alertId: result.alert?.id,
+          service: result.service,
+          organizationId: payload.organizationId,
+        };
       },
       { connection: this.redisService.getBullMqConnection() },
     );
@@ -91,19 +103,31 @@ export class IncidentProcessor implements OnModuleInit, OnModuleDestroy {
 
         const payload = job.data as GroupIncidentJobPayload;
         const minAlerts = payload.minAlerts ?? Number(this.config.get<string>('MIN_ALERTS_TO_GROUP', '2'));
-        const incident = await this.incidentBuilder.createIncidentIfThresholdMet(payload.service, minAlerts);
+        const incident = await this.incidentBuilder.createIncidentIfThresholdMet(
+          payload.organizationId,
+          payload.service,
+          minAlerts,
+        );
 
         if (!incident) {
-          this.logger.log(`Incident threshold not met for service ${payload.service}`);
-          return { incidentCreated: false, service: payload.service };
+          this.logger.log(
+            `Incident threshold not met for org ${payload.organizationId} service ${payload.service}`,
+          );
+          return { incidentCreated: false, service: payload.service, organizationId: payload.organizationId };
         }
 
         await this.queueProducer.enqueueAnalyzeIncident({
+          organizationId: payload.organizationId,
           incidentId: incident.id,
           slackReply: payload.slackReply,
         });
 
-        return { incidentCreated: true, incidentId: incident.id, service: payload.service };
+        return {
+          incidentCreated: true,
+          incidentId: incident.id,
+          service: payload.service,
+          organizationId: payload.organizationId,
+        };
       },
       { connection: this.redisService.getBullMqConnection() },
     );
@@ -139,15 +163,15 @@ export class AiAnalysisProcessor implements OnModuleInit, OnModuleDestroy {
         }
 
         const payload = job.data as AnalyzeIncidentJobPayload;
-        const incident = await this.incidentsService.findById(payload.incidentId);
+        const incident = await this.incidentsService.findById(payload.incidentId, payload.organizationId);
 
         if (!incident) {
-          throw new Error(`Incident ${payload.incidentId} not found`);
+          throw new Error(`Incident ${payload.incidentId} not found for org ${payload.organizationId}`);
         }
 
         const alerts = incident.alerts?.length
           ? incident.alerts
-          : await this.incidentsService.getAlertsForIncident(incident.id);
+          : await this.incidentsService.getAlertsForIncident(incident.id, payload.organizationId);
 
         if (!alerts.length) {
           throw new Error(`No alerts found for incident ${payload.incidentId}`);
@@ -158,6 +182,7 @@ export class AiAnalysisProcessor implements OnModuleInit, OnModuleDestroy {
 
         await this.incidentsService.updateWithAiResults(
           incident.id,
+          payload.organizationId,
           summary.summary,
           rootCause.root_cause,
           rootCause.confidence,
@@ -173,7 +198,7 @@ export class AiAnalysisProcessor implements OnModuleInit, OnModuleDestroy {
           });
         }
 
-        return { incidentId: incident.id, analyzed: true };
+        return { incidentId: incident.id, organizationId: payload.organizationId, analyzed: true };
       },
       { connection: this.redisService.getBullMqConnection() },
     );

@@ -11,6 +11,7 @@ import { SlackModule } from './modules/slack/slack.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
@@ -23,6 +24,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     RedisModule,
     AuthModule,
     OrganizationsModule,
+    IntegrationsModule,
     AlertsModule,
     IncidentsModule,
     AiModule,

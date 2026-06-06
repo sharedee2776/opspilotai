@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AlertEntity, AlertStatus } from '../../common/entities/alert.entity';
@@ -13,7 +13,7 @@ export class IncidentsService {
     private readonly alertRepository: Repository<AlertEntity>,
   ) {}
 
-  async create(data: Partial<IncidentEntity>): Promise<IncidentEntity> {
+  async create(data: Partial<IncidentEntity> & { organizationId: string }): Promise<IncidentEntity> {
     const incident = this.incidentRepository.create({
       ...data,
       status: IncidentStatus.ACTIVE,
@@ -23,25 +23,35 @@ export class IncidentsService {
     return this.incidentRepository.save(incident);
   }
 
-  async findAll(): Promise<IncidentEntity[]> {
+  async findAll(organizationId: string): Promise<IncidentEntity[]> {
     return this.incidentRepository.find({
+      where: { organizationId },
       relations: ['alerts', 'actions'],
       order: { createdAt: 'DESC' },
     });
   }
 
-  async findById(id: string): Promise<IncidentEntity | null> {
+  async findById(id: string, organizationId?: string): Promise<IncidentEntity | null> {
     return this.incidentRepository.findOne({
-      where: { id },
+      where: organizationId ? { id, organizationId } : { id },
       relations: ['alerts', 'actions'],
     });
   }
 
+  async requireById(id: string, organizationId: string): Promise<IncidentEntity> {
+    const incident = await this.findById(id, organizationId);
+    if (!incident) {
+      throw new NotFoundException('Incident not found');
+    }
+    return incident;
+  }
+
   async updateStatus(
     id: string,
+    organizationId: string,
     status: IncidentStatus,
   ): Promise<IncidentEntity | null> {
-    const existing = await this.findById(id);
+    const existing = await this.findById(id, organizationId);
     if (!existing) {
       return null;
     }
@@ -52,9 +62,10 @@ export class IncidentsService {
 
   async addAlertToIncident(
     incidentId: string,
+    organizationId: string,
     alert: AlertEntity,
   ): Promise<IncidentEntity | null> {
-    const incident = await this.findById(incidentId);
+    const incident = await this.findById(incidentId, organizationId);
     if (!incident) {
       return null;
     }
@@ -69,11 +80,12 @@ export class IncidentsService {
 
   async updateWithAiResults(
     incidentId: string,
+    organizationId: string,
     summary: string,
     rootCause: string,
     confidence: string,
   ): Promise<IncidentEntity | null> {
-    const incident = await this.findById(incidentId);
+    const incident = await this.findById(incidentId, organizationId);
     if (!incident) {
       return null;
     }
@@ -83,9 +95,9 @@ export class IncidentsService {
     return this.incidentRepository.save(incident);
   }
 
-  async getAlertsForIncident(incidentId: string): Promise<AlertEntity[]> {
+  async getAlertsForIncident(incidentId: string, organizationId: string): Promise<AlertEntity[]> {
     return this.alertRepository.find({
-      where: { incident: { id: incidentId } },
+      where: { incident: { id: incidentId }, organizationId },
       order: { createdAt: 'ASC' },
     });
   }
