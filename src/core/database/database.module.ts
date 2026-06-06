@@ -17,7 +17,7 @@ import { ActionEntity } from '../../common/entities/action.entity';
         port: Number(config.get<number>('DB_PORT', 5432)),
         username: config.get<string>('DB_USERNAME', 'postgres'),
         password: config.get<string>('DB_PASSWORD', 'postgres'),
-        database: config.get<string>('DB_NAME', 'opstrain_dev'),
+        database: config.get<string>('DB_NAME', 'opspilot_dev'),
         entities: [AlertEntity, IncidentEntity, ActionEntity],
         synchronize: config.get<string>('NODE_ENV') !== 'production',
         logging: config.get<string>('DB_LOGGING') === 'true',
