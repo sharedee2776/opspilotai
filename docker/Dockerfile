@@ -3,7 +3,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN apk add --no-cache python3 make g++
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 COPY . .
 RUN rm -f tsconfig.tsbuildinfo && npm run build
 
@@ -12,7 +12,7 @@ FROM node:20-alpine
 WORKDIR /app
 RUN apk add --no-cache dumb-init
 COPY package*.json ./
-RUN npm ci --only=production --legacy-peer-deps
+RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
