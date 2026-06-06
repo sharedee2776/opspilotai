@@ -4,6 +4,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AlertEntity } from '../../common/entities/alert.entity';
 import { IncidentEntity } from '../../common/entities/incident.entity';
 import { ActionEntity } from '../../common/entities/action.entity';
+import { UserEntity } from '../../common/entities/user.entity';
+import { OrganizationEntity } from '../../common/entities/organization.entity';
+import { OrganizationMemberEntity } from '../../common/entities/organization-member.entity';
+import { TeamEntity } from '../../common/entities/team.entity';
+import { TeamMemberEntity } from '../../common/entities/team-member.entity';
 
 @Module({
   imports: [
@@ -12,7 +17,16 @@ import { ActionEntity } from '../../common/entities/action.entity';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => {
-        const entities = [AlertEntity, IncidentEntity, ActionEntity];
+        const entities = [
+          AlertEntity,
+          IncidentEntity,
+          ActionEntity,
+          UserEntity,
+          OrganizationEntity,
+          OrganizationMemberEntity,
+          TeamEntity,
+          TeamMemberEntity,
+        ];
         const common = {
           entities,
           synchronize: config.get<string>('NODE_ENV') !== 'production',

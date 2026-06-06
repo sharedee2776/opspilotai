@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './core/database/database.module';
 import { RedisModule } from './core/redis/redis.module';
@@ -8,6 +9,9 @@ import { IncidentsModule } from './modules/incidents/incidents.module';
 import { AiModule } from './modules/ai/ai.module';
 import { SlackModule } from './modules/slack/slack.module';
 import { HealthModule } from './modules/health/health.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -17,12 +21,20 @@ import { HealthModule } from './modules/health/health.module';
     }),
     DatabaseModule,
     RedisModule,
+    AuthModule,
+    OrganizationsModule,
     AlertsModule,
     IncidentsModule,
     AiModule,
     SlackModule,
     QueueModule,
     HealthModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
   ],
 })
 export class AppModule {}

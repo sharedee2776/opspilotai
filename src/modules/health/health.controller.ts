@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { Public } from '../../common/decorators/public.decorator';
 import { RedisService } from '../../core/redis/redis.service';
 
 @Controller('health')
@@ -10,6 +11,7 @@ export class HealthController {
     private readonly redisService: RedisService,
   ) {}
 
+  @Public()
   @Get()
   async check() {
     const checks: Record<string, string> = {};
