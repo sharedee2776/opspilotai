@@ -4,6 +4,7 @@ import { AlertsModule } from '../../modules/alerts/alerts.module';
 import { IncidentsModule } from '../../modules/incidents/incidents.module';
 import { AiModule } from '../../modules/ai/ai.module';
 import { SlackNotificationsModule } from '../../modules/slack/slack-notifications.module';
+import { MetricsModule } from '../../modules/metrics/metrics.module';
 import { QueueProducerService } from './queue-producer.service';
 import {
   AiAnalysisProcessor,
@@ -13,7 +14,7 @@ import {
 
 @Global()
 @Module({
-  imports: [ConfigModule, AlertsModule, IncidentsModule, AiModule, SlackNotificationsModule],
+  imports: [ConfigModule, AlertsModule, IncidentsModule, AiModule, SlackNotificationsModule, MetricsModule],
   providers: [
     QueueProducerService,
     AlertProcessor,

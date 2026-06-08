@@ -10,6 +10,7 @@ import { OrganizationMemberEntity } from '../../common/entities/organization-mem
 import { TeamEntity } from '../../common/entities/team.entity';
 import { TeamMemberEntity } from '../../common/entities/team-member.entity';
 import { IntegrationEntity } from '../../common/entities/integration.entity';
+import { DatabaseMigrationService } from './database-migration.service';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { IntegrationEntity } from '../../common/entities/integration.entity';
       },
     }),
   ],
+  providers: [DatabaseMigrationService],
   exports: [TypeOrmModule],
 })
 export class DatabaseModule {}

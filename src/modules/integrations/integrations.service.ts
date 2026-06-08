@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import {
   ConflictException,
   ForbiddenException,
@@ -16,6 +17,12 @@ import {
   OrganizationRole,
 } from '../../common/entities/organization-member.entity';
 import { CreateIntegrationDto } from './dto/create-integration.dto';
+
+export interface IntegrationCreateResult extends IntegrationEntity {
+  webhookUrl?: string;
+  webhookHeader?: string;
+  webhookSecret?: string;
+}
 
 @Injectable()
 export class IntegrationsService {
@@ -41,15 +48,30 @@ export class IntegrationsService {
     return fallback || null;
   }
 
-  async listForOrganization(organizationId: string, user: AuthenticatedUser) {
-    await this.ensureOrganizationAccess(organizationId, user.userId);
-    return this.integrationRepository.find({
-      where: { organizationId },
-      order: { createdAt: 'ASC' },
+  async findDatadogIntegration(integrationId: string): Promise<IntegrationEntity | null> {
+    return this.integrationRepository.findOne({
+      where: { id: integrationId, type: IntegrationType.DATADOG },
     });
   }
 
-  async create(organizationId: string, user: AuthenticatedUser, dto: CreateIntegrationDto) {
+  async listForOrganization(organizationId: string, user: AuthenticatedUser) {
+    await this.ensureOrganizationAccess(organizationId, user.userId);
+    const integrations = await this.integrationRepository.find({
+      where: { organizationId },
+      order: { createdAt: 'ASC' },
+    });
+
+    return integrations.map((integration) => ({
+      ...integration,
+      credentials: this.redactCredentials(integration.credentials),
+    }));
+  }
+
+  async create(
+    organizationId: string,
+    user: AuthenticatedUser,
+    dto: CreateIntegrationDto,
+  ): Promise<IntegrationCreateResult> {
     await this.ensureOrganizationAdmin(organizationId, user);
 
     const existing = await this.integrationRepository.findOne({
@@ -59,14 +81,49 @@ export class IntegrationsService {
       throw new ConflictException('Integration with this external id already exists');
     }
 
-    return this.integrationRepository.save(
+    const credentials = { ...(dto.credentials ?? {}) };
+    if (dto.type === IntegrationType.DATADOG && !credentials.webhookSecret) {
+      credentials.webhookSecret = randomBytes(32).toString('hex');
+    }
+
+    const saved = await this.integrationRepository.save(
       this.integrationRepository.create({
         organizationId,
         type: dto.type,
         externalId: dto.externalId,
-        credentials: dto.credentials ?? {},
+        credentials,
       }),
     );
+
+    if (dto.type !== IntegrationType.DATADOG) {
+      return saved;
+    }
+
+    return {
+      ...saved,
+      webhookUrl: this.buildDatadogWebhookUrl(saved.id),
+      webhookHeader: 'X-OpsPilot-Webhook-Secret',
+      webhookSecret: String(credentials.webhookSecret),
+    };
+  }
+
+  private redactCredentials(credentials: Record<string, unknown>) {
+    if (!credentials?.webhookSecret) {
+      return credentials;
+    }
+
+    return {
+      ...credentials,
+      webhookSecret: '[redacted]',
+    };
+  }
+
+  buildDatadogWebhookUrl(integrationId: string): string {
+    const baseUrl = this.config.get<string>('APP_PUBLIC_URL', '').replace(/\/$/, '');
+    if (!baseUrl) {
+      return `/webhooks/datadog/${integrationId}`;
+    }
+    return `${baseUrl}/webhooks/datadog/${integrationId}`;
   }
 
   private async ensureOrganizationAccess(organizationId: string, userId: string) {

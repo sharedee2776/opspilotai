@@ -12,6 +12,8 @@ import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
+import { DatadogModule } from './modules/datadog/datadog.module';
+import { MetricsModule } from './modules/metrics/metrics.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
@@ -25,6 +27,8 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     AuthModule,
     OrganizationsModule,
     IntegrationsModule,
+    DatadogModule,
+    MetricsModule,
     AlertsModule,
     IncidentsModule,
     AiModule,

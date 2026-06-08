@@ -1,7 +1,10 @@
--- OpsPilot Phase C: multi-tenant columns and integrations table
--- Run against Railway Postgres when NODE_ENV=production (synchronize is off)
+-- Legacy additive migration for databases created before 000_initial_schema.sql.
+-- Safe no-ops when 000 has already run.
 
-CREATE TYPE integrations_type_enum AS ENUM ('slack', 'datadog', 'cloudwatch');
+DO $$ BEGIN
+  CREATE TYPE integrations_type_enum AS ENUM ('slack', 'datadog', 'cloudwatch');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS integrations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -14,25 +17,12 @@ CREATE TABLE IF NOT EXISTS integrations (
   UNIQUE (type, "externalId")
 );
 
-CREATE INDEX IF NOT EXISTS idx_integrations_org_type ON integrations ("organizationId", type);
-
 ALTER TABLE alerts ADD COLUMN IF NOT EXISTS "organizationId" uuid REFERENCES organizations(id) ON DELETE CASCADE;
 ALTER TABLE alerts ADD COLUMN IF NOT EXISTS "integrationId" uuid;
-
 ALTER TABLE incidents ADD COLUMN IF NOT EXISTS "organizationId" uuid REFERENCES organizations(id) ON DELETE CASCADE;
-
 ALTER TABLE actions ADD COLUMN IF NOT EXISTS "organizationId" uuid REFERENCES organizations(id) ON DELETE CASCADE;
 
+CREATE INDEX IF NOT EXISTS idx_integrations_org_type ON integrations ("organizationId", type);
 CREATE INDEX IF NOT EXISTS idx_alerts_org_dedup_created ON alerts ("organizationId", "dedupHash", "createdAt");
 CREATE INDEX IF NOT EXISTS idx_alerts_org_service_status ON alerts ("organizationId", service, status);
 CREATE INDEX IF NOT EXISTS idx_incidents_org_service_status ON incidents ("organizationId", service, status);
-
--- Optional backfill: assign existing rows to your first organization
--- UPDATE alerts SET "organizationId" = '<your-org-uuid>' WHERE "organizationId" IS NULL;
--- UPDATE incidents SET "organizationId" = '<your-org-uuid>' WHERE "organizationId" IS NULL;
--- UPDATE actions SET "organizationId" = '<your-org-uuid>' WHERE "organizationId" IS NULL;
-
--- After backfill, enforce NOT NULL:
--- ALTER TABLE alerts ALTER COLUMN "organizationId" SET NOT NULL;
--- ALTER TABLE incidents ALTER COLUMN "organizationId" SET NOT NULL;
--- ALTER TABLE actions ALTER COLUMN "organizationId" SET NOT NULL;

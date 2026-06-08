@@ -21,6 +21,7 @@ import {
   ProcessAlertJobPayload,
 } from '../queue.types';
 import { QueueProducerService } from '../queue-producer.service';
+import { MetricsService } from '../../../modules/metrics/metrics.service';
 
 @Injectable()
 export class AlertProcessor implements OnModuleInit, OnModuleDestroy {
@@ -31,6 +32,7 @@ export class AlertProcessor implements OnModuleInit, OnModuleDestroy {
     private readonly redisService: RedisService,
     private readonly alertsService: AlertsService,
     private readonly queueProducer: QueueProducerService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   onModuleInit(): void {
@@ -42,6 +44,8 @@ export class AlertProcessor implements OnModuleInit, OnModuleDestroy {
         }
 
         const payload = job.data as ProcessAlertJobPayload;
+        await this.metricsService.recordAlertReceived(payload.organizationId);
+
         const result = await this.alertsService.ingestAlert({
           organizationId: payload.organizationId,
           integrationId: payload.integrationId,
@@ -49,11 +53,14 @@ export class AlertProcessor implements OnModuleInit, OnModuleDestroy {
         });
 
         if (result.duplicate) {
+          await this.metricsService.recordDuplicateSkipped(payload.organizationId);
           this.logger.log(
             `Skipped duplicate alert for org ${payload.organizationId} service ${result.service}`,
           );
           return { duplicate: true, service: result.service, organizationId: payload.organizationId };
         }
+
+        await this.metricsService.recordAlertStored(payload.organizationId);
 
         await this.queueProducer.enqueueGroupIncident({
           organizationId: payload.organizationId,
@@ -91,6 +98,7 @@ export class IncidentProcessor implements OnModuleInit, OnModuleDestroy {
     private readonly config: ConfigService,
     private readonly incidentBuilder: IncidentBuilderService,
     private readonly queueProducer: QueueProducerService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   onModuleInit(): void {
@@ -115,6 +123,8 @@ export class IncidentProcessor implements OnModuleInit, OnModuleDestroy {
           );
           return { incidentCreated: false, service: payload.service, organizationId: payload.organizationId };
         }
+
+        await this.metricsService.recordIncidentCreated(payload.organizationId);
 
         await this.queueProducer.enqueueAnalyzeIncident({
           organizationId: payload.organizationId,
