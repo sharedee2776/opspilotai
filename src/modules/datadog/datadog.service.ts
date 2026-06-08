@@ -4,7 +4,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { IntegrationEntity, IntegrationType } from '../../common/entities/integration.entity';
+import { IntegrationEntity } from '../../common/entities/integration.entity';
 import { QueueProducerService } from '../../core/queue/queue-producer.service';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { DatadogNormalizerService } from './datadog-normalizer.service';
