@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { IncidentEntity } from './incident.entity';
 import { OrganizationEntity } from './organization.entity';
 
@@ -40,9 +40,13 @@ export class ActionEntity {
   @ManyToOne(() => OrganizationEntity, { onDelete: 'CASCADE' })
   organization: OrganizationEntity;
 
+  @Column({ type: 'uuid', nullable: true })
+  incidentId: string;
+
   @ManyToOne(() => IncidentEntity, (incident) => incident.actions, {
     onDelete: 'CASCADE',
   })
+  @JoinColumn({ name: 'incidentId' })
   incident: IncidentEntity;
 
   @CreateDateColumn()

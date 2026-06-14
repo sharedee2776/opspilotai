@@ -13,7 +13,9 @@ import { AuthModule } from './modules/auth/auth.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { DatadogModule } from './modules/datadog/datadog.module';
+import { CloudWatchModule } from './modules/cloudwatch/cloudwatch.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
+import { ActionsModule } from './modules/actions/actions.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
@@ -28,7 +30,9 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     OrganizationsModule,
     IntegrationsModule,
     DatadogModule,
+    CloudWatchModule,
     MetricsModule,
+    ActionsModule,
     AlertsModule,
     IncidentsModule,
     AiModule,

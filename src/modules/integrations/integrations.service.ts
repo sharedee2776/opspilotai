@@ -54,6 +54,12 @@ export class IntegrationsService {
     });
   }
 
+  async findCloudWatchIntegration(integrationId: string): Promise<IntegrationEntity | null> {
+    return this.integrationRepository.findOne({
+      where: { id: integrationId, type: IntegrationType.CLOUDWATCH },
+    });
+  }
+
   async listForOrganization(organizationId: string, user: AuthenticatedUser) {
     await this.ensureOrganizationAccess(organizationId, user.userId);
     const integrations = await this.integrationRepository.find({
@@ -82,7 +88,11 @@ export class IntegrationsService {
     }
 
     const credentials = { ...(dto.credentials ?? {}) };
-    if (dto.type === IntegrationType.DATADOG && !credentials.webhookSecret) {
+    const needsWebhookSecret =
+      [IntegrationType.DATADOG, IntegrationType.CLOUDWATCH].includes(dto.type) &&
+      !credentials.webhookSecret;
+
+    if (needsWebhookSecret) {
       credentials.webhookSecret = randomBytes(32).toString('hex');
     }
 
@@ -94,6 +104,15 @@ export class IntegrationsService {
         credentials,
       }),
     );
+
+    if (dto.type === IntegrationType.CLOUDWATCH) {
+      return {
+        ...saved,
+        webhookUrl: this.buildWebhookUrl('cloudwatch', saved.id),
+        webhookHeader: 'X-OpsPilot-Webhook-Secret',
+        webhookSecret: String(credentials.webhookSecret),
+      };
+    }
 
     if (dto.type !== IntegrationType.DATADOG) {
       return saved;
@@ -119,11 +138,15 @@ export class IntegrationsService {
   }
 
   buildDatadogWebhookUrl(integrationId: string): string {
+    return this.buildWebhookUrl('datadog', integrationId);
+  }
+
+  buildWebhookUrl(provider: string, integrationId: string): string {
     const baseUrl = this.config.get<string>('APP_PUBLIC_URL', '').replace(/\/$/, '');
     if (!baseUrl) {
-      return `/webhooks/datadog/${integrationId}`;
+      return `/webhooks/${provider}/${integrationId}`;
     }
-    return `${baseUrl}/webhooks/datadog/${integrationId}`;
+    return `${baseUrl}/webhooks/${provider}/${integrationId}`;
   }
 
   private async ensureOrganizationAccess(organizationId: string, userId: string) {

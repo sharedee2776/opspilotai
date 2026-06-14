@@ -15,7 +15,9 @@ async function bootstrap() {
     }),
   );
 
-  app.use('/slack/events', slackService.receiver.app);
+  if (slackService.isEnabled && slackService.receiver) {
+    app.use('/slack/events', slackService.receiver.app);
+  }
 
   const port = process.env.APP_PORT || 3000;
   await app.listen(port);

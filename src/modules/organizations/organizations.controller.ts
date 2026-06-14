@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { AddTeamMemberDto } from './dto/add-team-member.dto';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { CreateTeamDto } from './dto/create-team.dto';
+import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { OrganizationsService } from './organizations.service';
 
 @Controller('organizations')
@@ -18,6 +19,15 @@ export class OrganizationsController {
   @Post()
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateOrganizationDto) {
     return this.organizationsService.createOrganization(user, dto);
+  }
+
+  @Patch(':organizationId/settings')
+  updateSettings(
+    @Param('organizationId') organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateSettingsDto,
+  ) {
+    return this.organizationsService.updateSettings(organizationId, user, dto);
   }
 
   @Get(':organizationId/teams')

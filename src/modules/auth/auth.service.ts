@@ -91,15 +91,22 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const membership = await this.organizationMemberRepository.find({
+    const memberships = await this.organizationMemberRepository.find({
       where: { userId: user.id },
       relations: ['organization'],
       order: { createdAt: 'ASC' },
-      take: 1,
-    }).then((rows) => rows[0]);
+    });
+
+    if (!memberships.length) {
+      throw new UnauthorizedException('User is not assigned to an organization');
+    }
+
+    const membership = dto.organizationId
+      ? memberships.find((m) => m.organizationId === dto.organizationId)
+      : memberships[0];
 
     if (!membership) {
-      throw new UnauthorizedException('User is not assigned to an organization');
+      throw new UnauthorizedException('User is not a member of the requested organization');
     }
 
     const token = this.signToken({
@@ -114,6 +121,12 @@ export class AuthService {
       user: this.toPublicUser(user),
       organization: membership.organization,
       role: membership.role,
+      availableOrganizations: memberships.map((m) => ({
+        id: m.organizationId,
+        name: m.organization.name,
+        slug: m.organization.slug,
+        role: m.role,
+      })),
     };
   }
 

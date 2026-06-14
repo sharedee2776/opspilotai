@@ -15,17 +15,22 @@ export interface PostIncidentCreatedInput {
 @Injectable()
 export class SlackNotificationService {
   private readonly logger = new Logger(SlackNotificationService.name);
-  private readonly client: WebClient;
+  private readonly client: WebClient | null;
 
   constructor(private readonly config: ConfigService) {
     const token = this.config.get<string>('SLACK_BOT_TOKEN');
     if (!token) {
-      throw new Error('SLACK_BOT_TOKEN is required for Slack notifications');
+      this.logger.warn('SLACK_BOT_TOKEN not set — Slack notifications disabled');
+      this.client = null;
+      return;
     }
     this.client = new WebClient(token);
   }
 
   async postIncidentCreated(input: PostIncidentCreatedInput): Promise<void> {
+    if (!this.client) {
+      return;
+    }
     const { channel, incident, summary, rootCause, alertCount } = input;
 
     try {

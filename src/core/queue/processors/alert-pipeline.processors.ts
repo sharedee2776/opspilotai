@@ -7,6 +7,8 @@ import { IncidentBuilderService } from '../../../modules/incidents/services/inci
 import { IncidentsService } from '../../../modules/incidents/incidents.service';
 import { AiService } from '../../../modules/ai/ai.service';
 import { SlackNotificationService } from '../../../modules/slack/slack-notification.service';
+import { ActionsService } from '../../../modules/actions/actions.service';
+import { OrganizationsService } from '../../../modules/organizations/organizations.service';
 import {
   JOB_ANALYZE_INCIDENT,
   JOB_GROUP_INCIDENT,
@@ -162,6 +164,8 @@ export class AiAnalysisProcessor implements OnModuleInit, OnModuleDestroy {
     private readonly incidentsService: IncidentsService,
     private readonly aiService: AiService,
     private readonly slackNotification: SlackNotificationService,
+    private readonly actionsService: ActionsService,
+    private readonly organizationsService: OrganizationsService,
   ) {}
 
   onModuleInit(): void {
@@ -189,6 +193,7 @@ export class AiAnalysisProcessor implements OnModuleInit, OnModuleDestroy {
 
         const summary = await this.aiService.summarizeAlerts(alerts);
         const rootCause = await this.aiService.analyzeRootCause(alerts);
+        const suggestedFixes = await this.aiService.suggestFixes(alerts, rootCause.root_cause);
 
         await this.incidentsService.updateWithAiResults(
           incident.id,
@@ -198,14 +203,31 @@ export class AiAnalysisProcessor implements OnModuleInit, OnModuleDestroy {
           rootCause.confidence,
         );
 
-        if (payload.slackReply?.channel) {
+        if (suggestedFixes.length) {
+          await this.actionsService.createFromSuggestions(
+            incident.id,
+            payload.organizationId,
+            suggestedFixes,
+          );
+          this.logger.log(`Created ${suggestedFixes.length} suggested action(s) for incident ${incident.id}`);
+        }
+
+        const slackChannel =
+          payload.slackReply?.channel ??
+          await this.resolveDefaultSlackChannel(payload.organizationId);
+
+        if (slackChannel) {
           await this.slackNotification.postIncidentCreated({
-            channel: payload.slackReply.channel,
+            channel: slackChannel,
             incident,
             summary,
             rootCause,
             alertCount: alerts.length,
           });
+        } else {
+          this.logger.warn(
+            `No Slack channel for incident ${incident.id} — set defaultSlackChannelId via PATCH /organizations/:id/settings`,
+          );
         }
 
         return { incidentId: incident.id, organizationId: payload.organizationId, analyzed: true };
@@ -216,6 +238,11 @@ export class AiAnalysisProcessor implements OnModuleInit, OnModuleDestroy {
     this.worker.on('failed', (job, error) => {
       this.logger.error(`AI analysis job ${job?.id} failed: ${error.message}`);
     });
+  }
+
+  private async resolveDefaultSlackChannel(organizationId: string): Promise<string | null> {
+    const settings = await this.organizationsService.getSettings(organizationId);
+    return (settings.defaultSlackChannelId as string) ?? null;
   }
 
   async onModuleDestroy(): Promise<void> {

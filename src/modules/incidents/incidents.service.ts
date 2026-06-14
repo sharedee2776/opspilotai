@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AlertEntity, AlertStatus } from '../../common/entities/alert.entity';
 import { IncidentEntity, IncidentStatus } from '../../common/entities/incident.entity';
+import { PaginatedResult } from '../../common/dto/pagination.dto';
 
 @Injectable()
 export class IncidentsService {
@@ -23,12 +24,20 @@ export class IncidentsService {
     return this.incidentRepository.save(incident);
   }
 
-  async findAll(organizationId: string): Promise<IncidentEntity[]> {
-    return this.incidentRepository.find({
+  async findAll(
+    organizationId: string,
+    page = 1,
+    limit = 20,
+  ): Promise<PaginatedResult<IncidentEntity>> {
+    const [data, total] = await this.incidentRepository.findAndCount({
       where: { organizationId },
       relations: ['alerts', 'actions'],
       order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findById(id: string, organizationId?: string): Promise<IncidentEntity | null> {

@@ -20,6 +20,9 @@ export class OrganizationEntity {
   @Column({ unique: true })
   slug: string;
 
+  @Column({ type: 'jsonb', default: {} })
+  settings: Record<string, unknown>;
+
   @OneToMany(() => OrganizationMemberEntity, (membership) => membership.organization)
   members: OrganizationMemberEntity[];
 

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, Repository } from 'typeorm';
 import { AlertEntity, AlertSeverity, AlertSource, AlertStatus } from '../../common/entities/alert.entity';
+import { PaginatedResult } from '../../common/dto/pagination.dto';
 import { AlertNormalizerService } from './services/alert-normalizer.service';
 import { DeduplicationService } from './services/deduplication.service';
 
@@ -52,11 +53,19 @@ export class AlertsService {
     return { alert, duplicate: false, service };
   }
 
-  async findAll(organizationId: string): Promise<AlertEntity[]> {
-    return this.alertRepository.find({
+  async findAll(
+    organizationId: string,
+    page = 1,
+    limit = 20,
+  ): Promise<PaginatedResult<AlertEntity>> {
+    const [data, total] = await this.alertRepository.findAndCount({
       where: { organizationId },
       order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findById(id: string, organizationId: string): Promise<AlertEntity | null> {

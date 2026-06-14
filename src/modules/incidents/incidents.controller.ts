@@ -1,10 +1,12 @@
-import { Body, Controller, Get, NotFoundException, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Param, Patch, Post, Query } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { IncidentsService } from './incidents.service';
 import { IncidentStatus } from '../../common/entities/incident.entity';
 import { IncidentBuilderService } from './services/incident-builder.service';
 import { AiService } from '../ai/ai.service';
+import { CreateIncidentDto } from './dto/create-incident.dto';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 
 @Controller('incidents')
 export class IncidentsController {
@@ -15,16 +17,16 @@ export class IncidentsController {
   ) {}
 
   @Post()
-  async create(@CurrentUser() user: AuthenticatedUser, @Body() payload: Record<string, unknown>) {
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateIncidentDto) {
     return this.incidentsService.create({
-      ...payload,
+      ...dto,
       organizationId: user.organizationId,
-    } as any);
+    });
   }
 
   @Get()
-  async findAll(@CurrentUser() user: AuthenticatedUser) {
-    return this.incidentsService.findAll(user.organizationId);
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query() pagination: PaginationDto) {
+    return this.incidentsService.findAll(user.organizationId, pagination.page, pagination.limit);
   }
 
   @Get(':id')

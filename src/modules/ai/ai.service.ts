@@ -15,6 +15,13 @@ export interface RootCauseResult {
   explanation: string;
 }
 
+export interface SuggestedFix {
+  name: string;
+  type: string;
+  command: string;
+  riskLevel: 'low' | 'medium' | 'high';
+}
+
 @Injectable()
 export class AiService {
   private readonly client: OpenAI;
@@ -83,6 +90,59 @@ export class AiService {
     } catch (error) {
       console.error(`[AI] Root cause analysis error:`, error instanceof Error ? error.message : error);
       throw error;
+    }
+  }
+
+  async suggestFixes(alerts: AlertEntity[], rootCause: string): Promise<SuggestedFix[]> {
+    const alertLines = alerts
+      .slice(0, 10)
+      .map((a) => `- [${a.service}] ${a.title} (${a.severity})`)
+      .join('\n');
+
+    const prompt = `You are a senior DevOps engineer. Given these alerts and root cause, suggest up to 3 concrete remediation actions. Each action must include a shell command or kubectl/systemctl command that could fix the issue. Respond in valid JSON only.\n\nAlerts:\n${alertLines}\n\nRoot cause: ${rootCause}\n\nRespond with a JSON array of objects. Each object must have these exact keys: name (short label), type (e.g. restart_service, scale_up, rollback, clear_cache, exec), command (the exact shell command to run), riskLevel (low, medium, or high).`;
+
+    console.log(`[AI] Suggesting fixes with model: ${this.model}`);
+    try {
+      const response = await this.client.chat.completions.create({
+        model: this.model,
+        messages: [
+          { role: 'system', content: 'You are a helpful DevOps remediation assistant. Always respond with valid JSON only.' },
+          { role: 'user', content: prompt },
+        ],
+        temperature: this.temperature,
+        max_tokens: 500,
+      });
+
+      const raw = response.choices?.[0]?.message?.content ?? '[]';
+      console.log(`[AI] Suggested fixes response: ${raw}`);
+      return this.parseSuggestedFixes(raw);
+    } catch (error) {
+      console.error(`[AI] Suggest fixes error:`, error instanceof Error ? error.message : error);
+      return [];
+    }
+  }
+
+  private parseSuggestedFixes(raw: string): SuggestedFix[] {
+    try {
+      const cleaned = raw.trim().replace(/^```json\s*/i, '').replace(/```\s*$/i, '');
+      const parsed = JSON.parse(cleaned);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+      return parsed
+        .filter((item) => item && typeof item === 'object')
+        .slice(0, 3)
+        .map((item) => ({
+          name: String(item.name || 'Unnamed fix'),
+          type: String(item.type || 'exec'),
+          command: String(item.command || ''),
+          riskLevel: (['low', 'medium', 'high'] as const).includes(item.riskLevel)
+            ? (item.riskLevel as 'low' | 'medium' | 'high')
+            : 'medium',
+        }))
+        .filter((fix) => fix.command.length > 0);
+    } catch {
+      return [];
     }
   }
 

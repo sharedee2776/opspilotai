@@ -27,7 +27,7 @@ export class DatabaseMigrationService implements OnModuleInit {
       files = (await readdir(migrationsDir))
         .filter((file) => file.endsWith('.sql'))
         .sort();
-    } catch (error) {
+    } catch {
       this.logger.warn(`Migration directory not found at ${migrationsDir}; skipping`);
       return;
     }
@@ -36,12 +36,45 @@ export class DatabaseMigrationService implements OnModuleInit {
       return;
     }
 
-    this.logger.log(`Running ${files.length} database migration file(s)`);
+    await this.ensureTrackingTable();
+    const applied = await this.getAppliedMigrations();
 
-    for (const file of files) {
+    const pending = files.filter((f) => !applied.has(f));
+    if (!pending.length) {
+      this.logger.log('All migrations already applied');
+      return;
+    }
+
+    this.logger.log(`Running ${pending.length} pending migration(s)`);
+
+    for (const file of pending) {
       const sql = await readFile(join(migrationsDir, file), 'utf8');
       await this.dataSource.query(sql);
-      this.logger.log(`Applied migration ${file}`);
+      await this.recordMigration(file);
+      this.logger.log(`Applied migration: ${file}`);
     }
+  }
+
+  private async ensureTrackingTable(): Promise<void> {
+    await this.dataSource.query(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        filename TEXT PRIMARY KEY,
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+  }
+
+  private async getAppliedMigrations(): Promise<Set<string>> {
+    const rows: { filename: string }[] = await this.dataSource.query(
+      'SELECT filename FROM schema_migrations',
+    );
+    return new Set(rows.map((r) => r.filename));
+  }
+
+  private async recordMigration(filename: string): Promise<void> {
+    await this.dataSource.query(
+      'INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING',
+      [filename],
+    );
   }
 }

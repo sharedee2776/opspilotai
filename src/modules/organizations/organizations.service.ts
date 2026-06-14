@@ -18,6 +18,7 @@ import { UserEntity } from '../../common/entities/user.entity';
 import { AddTeamMemberDto } from './dto/add-team-member.dto';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { CreateTeamDto } from './dto/create-team.dto';
+import { UpdateSettingsDto } from './dto/update-settings.dto';
 
 @Injectable()
 export class OrganizationsService {
@@ -62,6 +63,22 @@ export class OrganizationsService {
     );
 
     return organization;
+  }
+
+  async updateSettings(
+    organizationId: string,
+    user: AuthenticatedUser,
+    dto: UpdateSettingsDto,
+  ): Promise<OrganizationEntity> {
+    await this.ensureOrganizationAdmin(organizationId, user);
+    const org = await this.organizationRepository.findOneOrFail({ where: { id: organizationId } });
+    org.settings = { ...org.settings, ...dto };
+    return this.organizationRepository.save(org);
+  }
+
+  async getSettings(organizationId: string): Promise<Record<string, unknown>> {
+    const org = await this.organizationRepository.findOne({ where: { id: organizationId } });
+    return org?.settings ?? {};
   }
 
   async listTeams(organizationId: string, user: AuthenticatedUser) {

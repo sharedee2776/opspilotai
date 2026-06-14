@@ -6,8 +6,9 @@ import { IntegrationsService } from '../integrations/integrations.service';
 
 @Injectable()
 export class SlackService {
-  public receiver: ExpressReceiver;
-  public slackApp: App;
+  public receiver: ExpressReceiver | null = null;
+  public slackApp: App | null = null;
+  public readonly isEnabled: boolean;
   private readonly logger = new Logger(SlackService.name);
 
   constructor(
@@ -16,10 +17,12 @@ export class SlackService {
     private readonly integrationsService: IntegrationsService,
   ) {
     const botToken = this.config.get<string>('SLACK_BOT_TOKEN');
-    const signingSecret = this.config.get<string>('SLACK_SIGNING_SECRET') || '';
+    const signingSecret = this.config.get<string>('SLACK_SIGNING_SECRET');
 
     if (!botToken || !signingSecret) {
-      throw new Error('Slack bot token and signing secret must be configured.');
+      this.logger.warn('SLACK_BOT_TOKEN or SLACK_SIGNING_SECRET not set — Slack listener disabled');
+      this.isEnabled = false;
+      return;
     }
 
     this.receiver = new ExpressReceiver({
@@ -34,11 +37,12 @@ export class SlackService {
       logLevel: LogLevel.INFO,
     });
 
+    this.isEnabled = true;
     this.registerListeners();
   }
 
   private registerListeners() {
-    this.slackApp.message(async ({ message, context }) => {
+    this.slackApp!.message(async ({ message, context }) => {
       if (typeof message !== 'object' || !('text' in message)) {
         return;
       }
