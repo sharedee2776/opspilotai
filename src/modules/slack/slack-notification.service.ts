@@ -10,6 +10,7 @@ export interface PostIncidentCreatedInput {
   summary: SummaryResult;
   rootCause: RootCauseResult;
   alertCount: number;
+  firstAlertAt?: Date;
 }
 
 @Injectable()
@@ -31,55 +32,83 @@ export class SlackNotificationService {
     if (!this.client) {
       return;
     }
-    const { channel, incident, summary, rootCause, alertCount } = input;
+    const { channel, incident, summary, rootCause, alertCount, firstAlertAt } = input;
+    const publicUrl = this.config.get<string>('APP_PUBLIC_URL', '');
+    const incidentUrl = publicUrl ? `${publicUrl}/incidents/${incident.id}` : null;
+
+    const createdTs = new Date(incident.createdAt).toUTCString().replace(' GMT', ' UTC');
+    const firstAlertTs = firstAlertAt
+      ? new Date(firstAlertAt).toUTCString().replace(' GMT', ' UTC')
+      : null;
+
+    const severityEmoji: Record<string, string> = {
+      critical: ':red_circle:',
+      high: ':large_orange_circle:',
+      medium: ':large_yellow_circle:',
+      low: ':white_circle:',
+    };
+    const emoji = severityEmoji[summary.severity?.toLowerCase()] ?? ':large_orange_circle:';
 
     try {
       await this.client.chat.postMessage({
         channel,
-        text: `Incident created: ${incident.title}`,
+        text: `${emoji} Incident: ${incident.title}`,
         blocks: [
           {
-            type: 'section',
+            type: 'header',
             text: {
-              type: 'mrkdwn',
-              text: `*Incident created:* ${incident.title}`,
+              type: 'plain_text',
+              text: `${emoji} Incident: ${incident.title}`,
+              emoji: true,
             },
           },
           {
             type: 'section',
             fields: [
-              {
-                type: 'mrkdwn',
-                text: `*Service:*\n${summary.service}`,
-              },
-              {
-                type: 'mrkdwn',
-                text: `*Severity:*\n${summary.severity}`,
-              },
+              { type: 'mrkdwn', text: `*Service:*\n\`${summary.service}\`` },
+              { type: 'mrkdwn', text: `*Severity:*\n${summary.severity?.toUpperCase()}` },
+              { type: 'mrkdwn', text: `*Alert count:*\n${alertCount}` },
+              { type: 'mrkdwn', text: `*Status:*\n${incident.status?.toUpperCase()}` },
             ],
           },
           {
             type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: `*Summary:*\n${summary.summary}`,
-            },
-          },
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: `*Root cause:*\n${rootCause.root_cause}\n*Confidence:* ${rootCause.confidence}`,
-            },
+            fields: [
+              { type: 'mrkdwn', text: `*Created:*\n${createdTs}` },
+              ...(firstAlertTs ? [{ type: 'mrkdwn' as const, text: `*First Alert:*\n${firstAlertTs}` }] : []),
+            ],
           },
           { type: 'divider' },
           {
             type: 'section',
             text: {
               type: 'mrkdwn',
-              text: `*Alert count:* ${alertCount}`,
+              text: `*:mag: AI Summary*\n${summary.summary}`,
             },
           },
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `*:bulb: Root Cause*\n${rootCause.root_cause}\n*Confidence:* ${rootCause.confidence}`,
+            },
+          },
+          ...(incidentUrl
+            ? [
+                { type: 'divider' as const },
+                {
+                  type: 'actions' as const,
+                  elements: [
+                    {
+                      type: 'button' as const,
+                      text: { type: 'plain_text' as const, text: 'View Incident', emoji: true },
+                      url: incidentUrl,
+                      style: 'primary' as const,
+                    },
+                  ],
+                },
+              ]
+            : []),
         ],
       });
     } catch (error) {

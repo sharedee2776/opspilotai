@@ -81,7 +81,6 @@ export class IncidentsController {
         user.organizationId,
         summary.summary,
         rootCause.root_cause,
-        rootCause.confidence,
       );
 
       const updatedIncident = await this.incidentsService.findById(incident.id, user.organizationId);

@@ -92,7 +92,6 @@ export class IncidentsService {
     organizationId: string,
     summary: string,
     rootCause: string,
-    confidence: string,
   ): Promise<IncidentEntity | null> {
     const incident = await this.findById(incidentId, organizationId);
     if (!incident) {
@@ -100,7 +99,7 @@ export class IncidentsService {
     }
 
     incident.summary = summary;
-    incident.rootCause = `${rootCause} (confidence: ${confidence})`;
+    incident.rootCause = rootCause;
     return this.incidentRepository.save(incident);
   }
 

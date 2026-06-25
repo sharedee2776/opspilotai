@@ -192,6 +192,11 @@ export class AiAnalysisProcessor implements OnModuleInit, OnModuleDestroy {
         }
 
         const summary = await this.aiService.summarizeAlerts(alerts);
+        // If GPT returns 'unknown' for service, use the known incident service
+        if (!summary.service || summary.service === 'unknown') {
+          summary.service = incident.service ?? 'unknown';
+        }
+
         const rootCause = await this.aiService.analyzeRootCause(alerts);
         const suggestedFixes = await this.aiService.suggestFixes(alerts, rootCause.root_cause);
 
@@ -200,7 +205,6 @@ export class AiAnalysisProcessor implements OnModuleInit, OnModuleDestroy {
           payload.organizationId,
           summary.summary,
           rootCause.root_cause,
-          rootCause.confidence,
         );
 
         if (suggestedFixes.length) {
@@ -217,12 +221,14 @@ export class AiAnalysisProcessor implements OnModuleInit, OnModuleDestroy {
           await this.resolveDefaultSlackChannel(payload.organizationId);
 
         if (slackChannel) {
+          const firstAlertAt = alerts.length > 0 ? new Date(alerts[0].createdAt) : undefined;
           await this.slackNotification.postIncidentCreated({
             channel: slackChannel,
             incident,
             summary,
             rootCause,
             alertCount: alerts.length,
+            firstAlertAt,
           });
         } else {
           this.logger.warn(
