@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
+import { AddMemberDto } from './dto/add-member.dto';
 import { AddTeamMemberDto } from './dto/add-team-member.dto';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { CreateTeamDto } from './dto/create-team.dto';
@@ -28,6 +29,32 @@ export class OrganizationsController {
     @Body() dto: UpdateSettingsDto,
   ) {
     return this.organizationsService.updateSettings(organizationId, user, dto);
+  }
+
+  @Get(':organizationId/members')
+  listMembers(
+    @Param('organizationId') organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.organizationsService.listMembers(organizationId, user);
+  }
+
+  @Post(':organizationId/members')
+  addMember(
+    @Param('organizationId') organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: AddMemberDto,
+  ) {
+    return this.organizationsService.addMember(organizationId, user, dto);
+  }
+
+  @Delete(':organizationId/members/:userId')
+  removeMember(
+    @Param('organizationId') organizationId: string,
+    @Param('userId') userId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.organizationsService.removeMember(organizationId, userId, user);
   }
 
   @Get(':organizationId/teams')

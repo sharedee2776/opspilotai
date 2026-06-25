@@ -83,8 +83,27 @@ export interface PaginatedResult<T> {
 }
 
 export interface LoginResponse {
-  token: string;
+  accessToken: string;
   user: User;
   organization: Organization;
   availableOrganizations?: Array<{ organization: Organization; role: string }>;
+}
+
+export interface OrgMember {
+  id: string;
+  userId: string;
+  organizationId: string;
+  role: 'owner' | 'admin' | 'member';
+  user: { id: string; email: string; name: string };
+  createdAt: string;
+}
+
+export interface Integration {
+  id: string;
+  organizationId: string;
+  type: 'slack' | 'datadog' | 'cloudwatch';
+  externalId: string;
+  webhookUrl?: string;
+  webhookSecret?: string;
+  createdAt: string;
 }

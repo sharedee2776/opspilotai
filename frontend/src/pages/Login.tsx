@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Login() {
@@ -80,6 +80,13 @@ export default function Login() {
             </button>
           </form>
         </div>
+
+        <p className="text-center text-slate-500 text-sm mt-4">
+          Don't have an account?{' '}
+          <Link to="/register" className="text-brand-light hover:underline">
+            Create a free workspace
+          </Link>
+        </p>
       </div>
     </div>
   );

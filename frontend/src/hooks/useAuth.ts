@@ -26,11 +26,18 @@ export function useAuth() {
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await authApi.login(email, password);
-    localStorage.setItem('opspilot_token', res.token);
+    localStorage.setItem('opspilot_token', res.accessToken);
     localStorage.setItem('opspilot_user', JSON.stringify(res.user));
     localStorage.setItem('opspilot_org', JSON.stringify(res.organization));
-    setAuth({ token: res.token, user: res.user, organization: res.organization });
+    setAuth({ token: res.accessToken, user: res.user, organization: res.organization });
     return res;
+  }, []);
+
+  const loginWithData = useCallback((res: { accessToken: string; user: User; organization: Organization }) => {
+    localStorage.setItem('opspilot_token', res.accessToken);
+    localStorage.setItem('opspilot_user', JSON.stringify(res.user));
+    localStorage.setItem('opspilot_org', JSON.stringify(res.organization));
+    setAuth({ token: res.accessToken, user: res.user, organization: res.organization });
   }, []);
 
   const logout = useCallback(() => {
@@ -40,5 +47,5 @@ export function useAuth() {
     setAuth({ token: null, user: null, organization: null });
   }, []);
 
-  return { ...auth, isAuthenticated: !!auth.token, login, logout };
+  return { ...auth, isAuthenticated: !!auth.token, login, loginWithData, logout };
 }

@@ -3,19 +3,51 @@ import {
   LayoutDashboard,
   AlertTriangle,
   Siren,
+  Settings,
   LogOut,
   Zap,
+  Plug,
+  Crown,
+  Shield,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
-const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/incidents', icon: Siren, label: 'Incidents' },
-  { to: '/alerts', icon: AlertTriangle, label: 'Alerts' },
-];
+function navItems(role: string) {
+  const base = [
+    { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/incidents', icon: Siren, label: 'Incidents' },
+    { to: '/alerts', icon: AlertTriangle, label: 'Alerts' },
+  ];
+  if (role === 'owner' || role === 'admin') {
+    base.push({ to: '/integrations', icon: Plug, label: 'Integrations' });
+  }
+  base.push({ to: '/settings', icon: Settings, label: 'Settings' });
+  return base;
+}
+
+function RoleBadge({ role }: { role: string }) {
+  if (role === 'owner') {
+    return (
+      <div className="flex items-center gap-1 px-1.5 py-0.5 bg-yellow-500/15 border border-yellow-500/25 rounded text-yellow-400 text-xs font-medium">
+        <Crown className="w-3 h-3" /> Owner
+      </div>
+    );
+  }
+  if (role === 'admin') {
+    return (
+      <div className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-500/15 border border-blue-500/25 rounded text-blue-400 text-xs font-medium">
+        <Shield className="w-3 h-3" /> Admin
+      </div>
+    );
+  }
+  return (
+    <span className="text-xs text-slate-600 capitalize">{role}</span>
+  );
+}
 
 export default function Sidebar() {
   const { organization, user, logout } = useAuth();
+  const items = navItems(user?.role ?? 'member');
 
   return (
     <aside className="w-56 flex-shrink-0 bg-surface-card border-r border-surface-border flex flex-col">
@@ -34,7 +66,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-2 py-4 space-y-0.5">
-        {navItems.map(({ to, icon: Icon, label }) => (
+        {items.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
@@ -56,8 +88,10 @@ export default function Sidebar() {
       {/* User */}
       <div className="px-2 py-3 border-t border-surface-border">
         <div className="px-3 py-2 mb-1">
-          <p className="text-white text-xs font-medium truncate">{user?.email}</p>
-          <p className="text-slate-500 text-xs capitalize">{user?.role}</p>
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <p className="text-white text-xs font-medium truncate flex-1">{user?.name ?? user?.email}</p>
+          </div>
+          <RoleBadge role={user?.role ?? 'member'} />
         </div>
         <button
           onClick={logout}

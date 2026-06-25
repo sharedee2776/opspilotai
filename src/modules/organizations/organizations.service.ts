@@ -158,6 +158,79 @@ export class OrganizationsService {
     );
   }
 
+  async listMembers(organizationId: string, user: AuthenticatedUser) {
+    await this.ensureOrganizationAccess(organizationId, user.userId);
+    const members = await this.organizationMemberRepository.find({
+      where: { organizationId },
+      relations: ['user'],
+      order: { createdAt: 'ASC' },
+    });
+    return members.map((m) => ({
+      id: m.id,
+      userId: m.userId,
+      organizationId: m.organizationId,
+      role: m.role,
+      createdAt: m.createdAt,
+      user: m.user
+        ? { id: m.user.id, email: m.user.email, name: m.user.name }
+        : null,
+    }));
+  }
+
+  async addMember(
+    organizationId: string,
+    user: AuthenticatedUser,
+    dto: { email: string; role?: OrganizationRole },
+  ) {
+    await this.ensureOrganizationAdmin(organizationId, user);
+
+    const targetUser = await this.userRepository.findOne({
+      where: { email: dto.email.toLowerCase() },
+    });
+    if (!targetUser) {
+      throw new NotFoundException(`No account found for ${dto.email}. Ask them to register first.`);
+    }
+
+    const existing = await this.organizationMemberRepository.findOne({
+      where: { organizationId, userId: targetUser.id },
+    });
+    if (existing) {
+      throw new ConflictException('This user is already a member of your workspace');
+    }
+
+    const member = await this.organizationMemberRepository.save(
+      this.organizationMemberRepository.create({
+        organizationId,
+        userId: targetUser.id,
+        role: dto.role ?? OrganizationRole.MEMBER,
+      }),
+    );
+
+    return {
+      id: member.id,
+      userId: member.userId,
+      organizationId: member.organizationId,
+      role: member.role,
+      createdAt: member.createdAt,
+      user: { id: targetUser.id, email: targetUser.email, name: targetUser.name },
+    };
+  }
+
+  async removeMember(organizationId: string, targetUserId: string, user: AuthenticatedUser) {
+    await this.ensureOrganizationAdmin(organizationId, user);
+
+    const member = await this.organizationMemberRepository.findOne({
+      where: { organizationId, userId: targetUserId },
+    });
+    if (!member) throw new NotFoundException('Member not found');
+    if (member.role === OrganizationRole.OWNER) {
+      throw new ForbiddenException('Cannot remove the organization owner');
+    }
+
+    await this.organizationMemberRepository.remove(member);
+    return { removed: true };
+  }
+
   private async ensureOrganizationAccess(organizationId: string, userId: string) {
     const membership = await this.organizationMemberRepository.findOne({
       where: { organizationId, userId },
