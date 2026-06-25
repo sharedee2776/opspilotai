@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(nc -z localhost 5432)",
+      "Bash(nc -z localhost 6379)",
+      "Bash(ls /Applications/ | grep -i docker 2>&1; ls ~/Applications/ | grep -i docker 2>&1)",
+      "Read(//Applications/**)",
+      "Read(//Users/mac/Applications/**)",
+      "Bash(open -a Docker)",
+      "Bash(docker compose *)",
+      "Bash(docker exec *)",
+      "Bash(node dist/main.js)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(sleep 5 && cat /tmp/opspilot.log)",
+      "Read(//private/tmp/**)",
+      "Bash(kill 29708)",
+      "Bash(node dist/main.js > /tmp/opspilot.log 2>&1 & *)",
+      "Bash(kill 30049)",
+      "Bash(APP_PORT=3001 node dist/main.js)",
+      "Bash(curl -s -X POST http://localhost:3001/auth/register -H 'Content-Type: application/json' -d '{\"name\":\"Test User\",\"email\":\"test@opspilot.dev\",\"password\":\"password123\",\"organizationName\":\"OpsPilot Demo\"}')",
+      "Bash(curl -s -X POST http://localhost:3001/alerts -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3OWRkMjkyMi0zN2QxLTQxMWItYTQ4OS02NGM1NGEwNjdkN2MiLCJlbWFpbCI6InRlc3RAb3BzcGlsb3QuZGV2Iiwib3JnYW5pemF0aW9uSWQiOiI3M2E2ZDE4ZC0zNDEwLTQzMjQtYmI0MS00NTYzNjU4NmUzODkiLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3ODEzMTM2OTcsImV4cCI6MTc4MTkxODQ5N30.sTlmJxKd9pQe0cH_fDyaGsKlk9TV0cRsKHCc2TfAz9A' -H 'Content-Type: application/json' -d '{\"title\":\"High CPU usage on payments service\",\"service\":\"payments\",\"severity\":\"high\",\"description\":\"CPU sustained above 95% for 10 minutes on payments-api pod\"}')",
+      "Bash(curl -s http://localhost:3001/health)",
+      "Bash(docker start *)",
+      "Bash(curl -s -X PATCH http://localhost:3001/organizations/73a6d18d-3410-4324-bb41-45636586e389/settings -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3OWRkMjkyMi0zN2QxLTQxMWItYTQ4OS02NGM1NGEwNjdkN2MiLCJlbWFpbCI6InRlc3RAb3BzcGlsb3QuZGV2Iiwib3JnYW5pemF0aW9uSWQiOiI3M2E2ZDE4ZC0zNDEwLTQzMjQtYmI0MS00NTYzNjU4NmUzODkiLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3ODE0MjA5NDIsImV4cCI6MTc4MjAyNTc0Mn0.qDN8r_tq3vdT-2-grVwmNWD4lpc2vilxqxUR1REiT74' -H 'Content-Type: application/json' -d '{\"defaultSlackChannelId\":\"C07XXXCHANNEL\",\"defaultSlackChannelName\":\"#incidents\"}')",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
+    ],
+    "additionalDirectories": [
+      "/private/tmp"
+    ]
+  }
+}
