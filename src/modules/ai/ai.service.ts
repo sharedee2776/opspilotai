@@ -148,7 +148,7 @@ export class AiService {
 
   private parseSummary(raw: string): SummaryResult {
     try {
-      const parsed = JSON.parse(raw.trim());
+      const parsed = JSON.parse(this.stripMarkdown(raw));
       return {
         summary: String(parsed.summary || 'No summary available'),
         service: String(parsed.service || 'unknown'),
@@ -156,7 +156,7 @@ export class AiService {
       };
     } catch {
       return {
-        summary: raw.trim(),
+        summary: this.stripMarkdown(raw),
         service: 'unknown',
         severity: 'medium',
       };
@@ -165,7 +165,7 @@ export class AiService {
 
   private parseRootCause(raw: string): RootCauseResult {
     try {
-      const parsed = JSON.parse(raw.trim());
+      const parsed = JSON.parse(this.stripMarkdown(raw));
       return {
         root_cause: String(parsed.root_cause || 'Unknown root cause'),
         confidence: String(parsed.confidence || 'low'),
@@ -173,10 +173,14 @@ export class AiService {
       };
     } catch {
       return {
-        root_cause: raw.trim(),
+        root_cause: this.stripMarkdown(raw),
         confidence: 'low',
-        explanation: raw.trim(),
+        explanation: this.stripMarkdown(raw),
       };
     }
+  }
+
+  private stripMarkdown(raw: string): string {
+    return raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
   }
 }
