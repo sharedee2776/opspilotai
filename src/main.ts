@@ -19,7 +19,7 @@ async function bootstrap() {
     app.use('/slack/events', slackService.receiver.app);
   }
 
-  const port = process.env.APP_PORT || 3000;
+  const port = process.env.PORT || process.env.APP_PORT || 3000;
   await app.listen(port);
   console.log(`🚀 OpsPilot AI running on port ${port}`);
 }
