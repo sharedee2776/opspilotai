@@ -64,7 +64,6 @@ describe('IncidentsController grouping flow', () => {
       'org-1',
       'Test summary',
       'DB overload',
-      'high',
     );
   });
 });
