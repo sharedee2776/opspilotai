@@ -5,6 +5,7 @@ import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.in
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { FirebaseLoginDto, FirebaseRegisterDto } from './dto/firebase-auth.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -20,6 +21,18 @@ export class AuthController {
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Public()
+  @Post('firebase')
+  firebaseLogin(@Body() dto: FirebaseLoginDto) {
+    return this.authService.firebaseLogin(dto.idToken);
+  }
+
+  @Public()
+  @Post('firebase/register')
+  firebaseRegister(@Body() dto: FirebaseRegisterDto) {
+    return this.authService.firebaseRegister(dto);
   }
 
   @Get('me')

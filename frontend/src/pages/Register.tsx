@@ -1,8 +1,15 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { firebaseAuth } from '../lib/firebase';
 import { authApi } from '../api/auth';
 import { useAuth } from '../hooks/useAuth';
 import { Zap, CheckCircle } from 'lucide-react';
+
+const FIREBASE_ENABLED = !!(
+  import.meta.env.VITE_FIREBASE_API_KEY &&
+  import.meta.env.VITE_FIREBASE_API_KEY !== 'your-api-key'
+);
 
 const STEPS = ['Account', 'Workspace', 'Done'];
 
@@ -46,19 +53,41 @@ export default function Register() {
     setError('');
     setLoading(true);
     try {
-      const res = await authApi.register({
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        organizationName: form.organizationName,
-      });
-      loginWithData(res);
+      if (FIREBASE_ENABLED) {
+        // Create user in Firebase first, then register in our backend
+        const cred = await createUserWithEmailAndPassword(firebaseAuth, form.email, form.password);
+        await updateProfile(cred.user, { displayName: form.name });
+        const idToken = await cred.user.getIdToken();
+        // Use firebase token to register + get our JWT
+        const res = await authApi.firebaseRegister({
+          idToken,
+          name: form.name,
+          organizationName: form.organizationName,
+        });
+        loginWithData(res);
+      } else {
+        const res = await authApi.register({
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          organizationName: form.organizationName,
+        });
+        loginWithData(res);
+      }
       setStep(2);
       setTimeout(() => navigate('/settings?onboarding=1'), 1800);
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(typeof msg === 'string' ? msg : 'Registration failed. Please try again.');
+      const code = (err as { code?: string })?.code;
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      if (code === 'auth/email-already-in-use') {
+        setError('This email is already registered. Sign in instead.');
+      } else if (code === 'auth/weak-password') {
+        setError('Password is too weak. Use at least 8 characters.');
+      } else if (typeof msg === 'string') {
+        setError(msg);
+      } else {
+        setError('Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

@@ -9,6 +9,7 @@ import { UserEntity } from '../../common/entities/user.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { FirebaseAdminService } from './firebase/firebase-admin.service';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     TypeOrmModule.forFeature([UserEntity, OrganizationEntity, OrganizationMemberEntity]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, FirebaseAdminService],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
