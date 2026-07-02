@@ -86,7 +86,39 @@ export interface LoginResponse {
   accessToken: string;
   user: User;
   organization: Organization;
+  isSuperAdmin?: boolean;
   availableOrganizations?: Array<{ organization: Organization; role: string }>;
+}
+
+export interface AdminOverview {
+  totals: {
+    users: number;
+    organizations: number;
+    incidents: number;
+    alerts: number;
+    integrations: number;
+    activeIncidents: number;
+  };
+  signupTrend: Array<{ day: string; count: number }>;
+}
+
+export interface AdminOrg {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+  memberCount: number;
+  incidentCount: number;
+  alertCount: number;
+  integrationCount: number;
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+  organizations: Array<{ id: string; name: string; slug: string; role: string }>;
 }
 
 export interface OrgMember {

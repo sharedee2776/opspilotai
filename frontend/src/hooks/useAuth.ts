@@ -6,6 +6,7 @@ interface AuthState {
   token: string | null;
   user: User | null;
   organization: Organization | null;
+  isSuperAdmin: boolean;
 }
 
 function loadAuth(): AuthState {
@@ -15,10 +16,18 @@ function loadAuth(): AuthState {
     const user = raw ? (JSON.parse(raw) as User) : null;
     const orgRaw = localStorage.getItem('opspilot_org');
     const organization = orgRaw ? (JSON.parse(orgRaw) as Organization) : null;
-    return { token, user, organization };
+    const isSuperAdmin = localStorage.getItem('opspilot_super') === 'true';
+    return { token, user, organization, isSuperAdmin };
   } catch {
-    return { token: null, user: null, organization: null };
+    return { token: null, user: null, organization: null, isSuperAdmin: false };
   }
+}
+
+function persist(res: { accessToken: string; user: User; organization: Organization; isSuperAdmin?: boolean }) {
+  localStorage.setItem('opspilot_token', res.accessToken);
+  localStorage.setItem('opspilot_user', JSON.stringify(res.user));
+  localStorage.setItem('opspilot_org', JSON.stringify(res.organization));
+  localStorage.setItem('opspilot_super', res.isSuperAdmin ? 'true' : 'false');
 }
 
 export function useAuth() {
@@ -26,25 +35,22 @@ export function useAuth() {
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await authApi.login(email, password);
-    localStorage.setItem('opspilot_token', res.accessToken);
-    localStorage.setItem('opspilot_user', JSON.stringify(res.user));
-    localStorage.setItem('opspilot_org', JSON.stringify(res.organization));
-    setAuth({ token: res.accessToken, user: res.user, organization: res.organization });
+    persist(res);
+    setAuth({ token: res.accessToken, user: res.user, organization: res.organization, isSuperAdmin: !!res.isSuperAdmin });
     return res;
   }, []);
 
-  const loginWithData = useCallback((res: { accessToken: string; user: User; organization: Organization }) => {
-    localStorage.setItem('opspilot_token', res.accessToken);
-    localStorage.setItem('opspilot_user', JSON.stringify(res.user));
-    localStorage.setItem('opspilot_org', JSON.stringify(res.organization));
-    setAuth({ token: res.accessToken, user: res.user, organization: res.organization });
+  const loginWithData = useCallback((res: { accessToken: string; user: User; organization: Organization; isSuperAdmin?: boolean }) => {
+    persist(res);
+    setAuth({ token: res.accessToken, user: res.user, organization: res.organization, isSuperAdmin: !!res.isSuperAdmin });
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem('opspilot_token');
     localStorage.removeItem('opspilot_user');
     localStorage.removeItem('opspilot_org');
-    setAuth({ token: null, user: null, organization: null });
+    localStorage.removeItem('opspilot_super');
+    setAuth({ token: null, user: null, organization: null, isSuperAdmin: false });
   }, []);
 
   return { ...auth, isAuthenticated: !!auth.token, login, loginWithData, logout };

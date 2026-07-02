@@ -9,10 +9,11 @@ import {
   Plug,
   Crown,
   Shield,
+  ShieldAlert,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
-function navItems(role: string) {
+function navItems(role: string, isSuperAdmin: boolean) {
   const base = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/incidents', icon: Siren, label: 'Incidents' },
@@ -22,6 +23,9 @@ function navItems(role: string) {
     base.push({ to: '/integrations', icon: Plug, label: 'Integrations' });
   }
   base.push({ to: '/settings', icon: Settings, label: 'Settings' });
+  if (isSuperAdmin) {
+    base.push({ to: '/admin', icon: ShieldAlert, label: 'Platform Admin' });
+  }
   return base;
 }
 
@@ -46,8 +50,8 @@ function RoleBadge({ role }: { role: string }) {
 }
 
 export default function Sidebar() {
-  const { organization, user, logout } = useAuth();
-  const items = navItems(user?.role ?? 'member');
+  const { organization, user, isSuperAdmin, logout } = useAuth();
+  const items = navItems(user?.role ?? 'member', isSuperAdmin);
 
   return (
     <aside className="w-56 flex-shrink-0 bg-surface-card border-r border-surface-border flex flex-col">

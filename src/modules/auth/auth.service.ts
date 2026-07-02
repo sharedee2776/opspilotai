@@ -4,6 +4,7 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
@@ -21,6 +22,8 @@ import { FirebaseRegisterDto } from './dto/firebase-auth.dto';
 export class AuthService {
   private readonly saltRounds = 12;
 
+  private readonly platformAdminEmail: string;
+
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
@@ -31,7 +34,14 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
     private readonly firebase: FirebaseAdminService,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.platformAdminEmail = (config.get<string>('PLATFORM_ADMIN_EMAIL') ?? '').toLowerCase();
+  }
+
+  private isSuperAdmin(email: string): boolean {
+    return !!this.platformAdminEmail && email.toLowerCase() === this.platformAdminEmail;
+  }
 
   async register(dto: RegisterDto) {
     const existing = await this.userRepository.findOne({ where: { email: dto.email.toLowerCase() } });
@@ -78,6 +88,7 @@ export class AuthService {
       accessToken: token,
       user: this.toPublicUser(result.user),
       organization: result.organization,
+      isSuperAdmin: this.isSuperAdmin(result.user.email),
     };
   }
 
@@ -125,6 +136,7 @@ export class AuthService {
       user: this.toPublicUser(user),
       organization: membership.organization,
       role: membership.role,
+      isSuperAdmin: this.isSuperAdmin(user.email),
       availableOrganizations: memberships.map((m) => ({
         id: m.organizationId,
         name: m.organization.name,
@@ -174,6 +186,7 @@ export class AuthService {
       user: this.toPublicUser(user),
       organization: membership.organization,
       role: membership.role,
+      isSuperAdmin: this.isSuperAdmin(user.email),
       availableOrganizations: memberships.map((m) => ({
         id: m.organizationId,
         name: m.organization.name,
@@ -238,6 +251,7 @@ export class AuthService {
       accessToken: token,
       user: this.toPublicUser(result.user),
       organization: result.organization,
+      isSuperAdmin: this.isSuperAdmin(result.user.email),
     };
   }
 

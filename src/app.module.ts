@@ -16,6 +16,7 @@ import { DatadogModule } from './modules/datadog/datadog.module';
 import { CloudWatchModule } from './modules/cloudwatch/cloudwatch.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
 import { ActionsModule } from './modules/actions/actions.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
@@ -33,6 +34,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     CloudWatchModule,
     MetricsModule,
     ActionsModule,
+    AdminModule,
     AlertsModule,
     IncidentsModule,
     AiModule,

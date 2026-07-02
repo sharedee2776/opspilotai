@@ -9,6 +9,7 @@ import IncidentDetail from './pages/IncidentDetail';
 import AlertsList from './pages/AlertsList';
 import Settings from './pages/Settings';
 import Integrations from './pages/Integrations';
+import Admin from './pages/Admin';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="alerts" element={<AlertsList />} />
             <Route path="settings" element={<Settings />} />
             <Route path="integrations" element={<Integrations />} />
+            <Route path="admin" element={<Admin />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
