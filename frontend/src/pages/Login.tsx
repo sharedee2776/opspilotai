@@ -6,15 +6,10 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
 } from 'firebase/auth';
-import { firebaseAuth } from '../lib/firebase';
+import { firebaseAuth, FIREBASE_ENABLED } from '../lib/firebase';
 import { authApi } from '../api/auth';
 import { useAuth } from '../hooks/useAuth';
 import { Zap, AlertCircle, X, CheckCircle } from 'lucide-react';
-
-const FIREBASE_ENABLED = !!(
-  import.meta.env.VITE_FIREBASE_API_KEY &&
-  import.meta.env.VITE_FIREBASE_API_KEY !== 'your-api-key'
-);
 
 function GoogleIcon() {
   return (
@@ -44,7 +39,7 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      if (FIREBASE_ENABLED) {
+      if (FIREBASE_ENABLED && firebaseAuth) {
         const cred = await signInWithEmailAndPassword(firebaseAuth, email, password);
         const idToken = await cred.user.getIdToken();
         const res = await authApi.firebaseLogin(idToken);
@@ -72,7 +67,7 @@ export default function Login() {
   }
 
   async function handleGoogleLogin() {
-    if (!FIREBASE_ENABLED) { setError('Google login requires Firebase configuration.'); return; }
+    if (!FIREBASE_ENABLED || !firebaseAuth) { setError('Google login requires Firebase configuration.'); return; }
     setError('');
     setLoading(true);
     try {
@@ -93,6 +88,7 @@ export default function Login() {
 
   async function handleReset(e: FormEvent) {
     e.preventDefault();
+    if (!firebaseAuth) return;
     try {
       await sendPasswordResetEmail(firebaseAuth, resetEmail || email);
       setResetSent(true);

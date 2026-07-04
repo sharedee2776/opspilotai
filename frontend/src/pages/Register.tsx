@@ -1,15 +1,10 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { firebaseAuth } from '../lib/firebase';
+import { firebaseAuth, FIREBASE_ENABLED } from '../lib/firebase';
 import { authApi } from '../api/auth';
 import { useAuth } from '../hooks/useAuth';
 import { Zap, CheckCircle } from 'lucide-react';
-
-const FIREBASE_ENABLED = !!(
-  import.meta.env.VITE_FIREBASE_API_KEY &&
-  import.meta.env.VITE_FIREBASE_API_KEY !== 'your-api-key'
-);
 
 const STEPS = ['Account', 'Workspace', 'Done'];
 
@@ -53,7 +48,7 @@ export default function Register() {
     setError('');
     setLoading(true);
     try {
-      if (FIREBASE_ENABLED) {
+      if (FIREBASE_ENABLED && firebaseAuth) {
         // Create user in Firebase first, then register in our backend
         const cred = await createUserWithEmailAndPassword(firebaseAuth, form.email, form.password);
         await updateProfile(cred.user, { displayName: form.name });
