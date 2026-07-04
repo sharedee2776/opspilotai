@@ -7,11 +7,30 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const slackService = app.get(SlackService);
 
+  // Build allowed origins from FRONTEND_URL (supports comma-separated list)
+  const allowedOrigins = [
+    ...(process.env.FRONTEND_URL
+      ? process.env.FRONTEND_URL.split(',').map((u) => u.trim())
+      : []),
+    'http://localhost:5175',
+    'http://localhost:3000',
+  ].filter(Boolean);
+
+  console.log('CORS allowed origins:', allowedOrigins);
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL
-      ? [process.env.FRONTEND_URL, 'http://localhost:5175']
-      : ['http://localhost:5175', 'http://localhost:3000'],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (server-to-server, curl, Postman)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`CORS blocked request from: ${origin}`);
+        callback(null, false);
+      }
+    },
     credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-OpsPilot-Webhook-Secret'],
   });
 
   app.useGlobalPipes(
