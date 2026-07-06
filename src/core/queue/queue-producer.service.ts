@@ -33,6 +33,14 @@ export class QueueProducerService implements OnModuleDestroy {
     this.alertQueue = new Queue(QUEUE_ALERTS, { connection });
     this.incidentQueue = new Queue(QUEUE_INCIDENTS, { connection });
     this.aiAnalysisQueue = new Queue(QUEUE_AI_ANALYSIS, { connection });
+
+    // Without error handlers, a Redis connection blip emits an unhandled 'error'
+    // event that crashes the Node process.
+    const onQueueError = (name: string) => (err: Error) =>
+      this.logger.error(`Queue "${name}" error: ${err.message}`);
+    this.alertQueue.on('error', onQueueError(QUEUE_ALERTS));
+    this.incidentQueue.on('error', onQueueError(QUEUE_INCIDENTS));
+    this.aiAnalysisQueue.on('error', onQueueError(QUEUE_AI_ANALYSIS));
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -40,7 +48,7 @@ export class QueueProducerService implements OnModuleDestroy {
       this.alertQueue.close(),
       this.incidentQueue.close(),
       this.aiAnalysisQueue.close(),
-    ]);
+    ]).catch(() => {});
   }
 
   async enqueueAlert(payload: ProcessAlertJobPayload) {
