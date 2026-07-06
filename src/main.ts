@@ -3,6 +3,13 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { SlackService } from './modules/slack/slack.service';
 
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] Unhandled promise rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught exception:', err);
+});
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const slackService = app.get(SlackService);

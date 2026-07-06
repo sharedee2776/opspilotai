@@ -83,6 +83,9 @@ export class AlertProcessor implements OnModuleInit, OnModuleDestroy {
     this.worker.on('failed', (job, error) => {
       this.logger.error(`Alert job ${job?.id} failed: ${error.message}`);
     });
+    this.worker.on('error', (error) => {
+      this.logger.error(`AlertProcessor worker error: ${error.message}`);
+    });
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -146,6 +149,9 @@ export class IncidentProcessor implements OnModuleInit, OnModuleDestroy {
 
     this.worker.on('failed', (job, error) => {
       this.logger.error(`Incident job ${job?.id} failed: ${error.message}`);
+    });
+    this.worker.on('error', (error) => {
+      this.logger.error(`IncidentProcessor worker error: ${error.message}`);
     });
   }
 
@@ -243,6 +249,9 @@ export class AiAnalysisProcessor implements OnModuleInit, OnModuleDestroy {
 
     this.worker.on('failed', (job, error) => {
       this.logger.error(`AI analysis job ${job?.id} failed: ${error.message}`);
+    });
+    this.worker.on('error', (error) => {
+      this.logger.error(`AiAnalysisProcessor worker error: ${error.message}`);
     });
   }
 
