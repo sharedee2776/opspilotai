@@ -35,8 +35,9 @@ async function bootstrap() {
     app.use('/slack/events', slackService.receiver.app);
   }
 
-  const port = process.env.PORT || process.env.APP_PORT || 3000;
-  await app.listen(port);
+  const port = parseInt(String(process.env.PORT || process.env.APP_PORT || 3000), 10);
+  console.log(`[Startup] Binding to 0.0.0.0:${port} (PORT env=${process.env.PORT})`);
+  await app.listen(port, '0.0.0.0');
   console.log(`🚀 OpsPilot AI running on port ${port}`);
 }
 
