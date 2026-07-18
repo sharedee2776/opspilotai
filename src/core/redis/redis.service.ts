@@ -37,8 +37,33 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   getBullMqConnection(): ConnectionOptions {
-    const url = this.buildRedisUrl();
-    return { url };
+    // BullMQ 5 uses ioredis internally. ioredis does NOT support { url: '...' } as
+    // a connection option — it silently falls back to localhost:6379 and crashes.
+    // We must parse the URL into { host, port, password, ... } that ioredis accepts.
+    const redisUrl = this.config.get<string>('REDIS_URL');
+    if (redisUrl) {
+      try {
+        const parsed = new URL(redisUrl);
+        const opts: Record<string, unknown> = {
+          host: parsed.hostname,
+          port: Number(parsed.port) || 6379,
+        };
+        if (parsed.password) opts.password = decodeURIComponent(parsed.password);
+        if (parsed.username && parsed.username !== 'default') opts.username = parsed.username;
+        const db = parsed.pathname?.replace('/', '');
+        if (db) opts.db = Number(db);
+        if (redisUrl.startsWith('rediss://')) opts.tls = {};
+        return opts as ConnectionOptions;
+      } catch {
+        this.logger.warn('Failed to parse REDIS_URL for BullMQ, using localhost fallback');
+      }
+    }
+
+    const host = this.config.get<string>('REDIS_HOST', 'localhost');
+    const port = Number(this.config.get<string>('REDIS_PORT', '6379'));
+    const password = this.config.get<string>('REDIS_PASSWORD');
+    const db = Number(this.config.get<string>('REDIS_DB', '0'));
+    return { host, port, ...(password ? { password } : {}), db } as ConnectionOptions;
   }
 
   async ping(): Promise<string> {
