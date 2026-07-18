@@ -5,6 +5,9 @@
   "author": "OpsPilot Team",
   "private": true,
   "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "prebuild": "rimraf dist tsconfig.tsbuildinfo",
     "build": "rimraf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json",

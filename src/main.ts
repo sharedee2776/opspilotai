@@ -5,11 +5,11 @@ import { SlackService } from './modules/slack/slack.service';
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('[FATAL] Unhandled promise rejection at:', promise, 'reason:', reason);
-  // Do NOT exit — keep the server alive so HTTP keeps responding
+  process.exit(1);
 });
 process.on('uncaughtException', (err, origin) => {
   console.error('[FATAL] Uncaught exception:', err.message, '\nStack:', err.stack, '\nOrigin:', origin);
-  // Do NOT exit — keep the server alive
+  process.exit(1);
 });
 process.on('SIGTERM', () => {
   console.log('[Shutdown] SIGTERM received — exiting gracefully');
