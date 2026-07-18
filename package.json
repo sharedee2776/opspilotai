@@ -8,6 +8,9 @@
   "engines": {
     "node": ">=22"
   },
+  "overrides": {
+    "jose": "4.15.9"
+  },
   "scripts": {
     "prebuild": "rimraf dist tsconfig.tsbuildinfo",
     "build": "rimraf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json",
