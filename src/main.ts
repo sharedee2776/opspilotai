@@ -3,11 +3,17 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { SlackService } from './modules/slack/slack.service';
 
-process.on('unhandledRejection', (reason) => {
-  console.error('[FATAL] Unhandled promise rejection:', reason);
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[FATAL] Unhandled promise rejection at:', promise, 'reason:', reason);
+  // Do NOT exit — keep the server alive so HTTP keeps responding
 });
-process.on('uncaughtException', (err) => {
-  console.error('[FATAL] Uncaught exception:', err);
+process.on('uncaughtException', (err, origin) => {
+  console.error('[FATAL] Uncaught exception:', err.message, '\nStack:', err.stack, '\nOrigin:', origin);
+  // Do NOT exit — keep the server alive
+});
+process.on('SIGTERM', () => {
+  console.log('[Shutdown] SIGTERM received — exiting gracefully');
+  process.exit(0);
 });
 
 async function bootstrap() {
