@@ -4,12 +4,12 @@ import { AppModule } from './app.module';
 import { SlackService } from './modules/slack/slack.service';
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('[FATAL] Unhandled promise rejection at:', promise, 'reason:', reason);
-  process.exit(1);
+  console.error('[WARN] Unhandled promise rejection at:', promise, 'reason:', reason);
+  // Do not exit — BullMQ/ioredis retries emit rejections; killing the process causes a Railway restart loop
 });
 process.on('uncaughtException', (err, origin) => {
-  console.error('[FATAL] Uncaught exception:', err.message, '\nStack:', err.stack, '\nOrigin:', origin);
-  process.exit(1);
+  console.error('[WARN] Uncaught exception:', err.message, '\nStack:', err.stack, '\nOrigin:', origin);
+  // Do not exit — keeps the HTTP server alive for auth/registration even if BullMQ workers fail
 });
 process.on('SIGTERM', () => {
   console.log('[Shutdown] SIGTERM received — exiting gracefully');
