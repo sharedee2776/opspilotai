@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { DatabaseModule } from './core/database/database.module';
 import { RedisModule } from './core/redis/redis.module';
 import { QueueModule } from './core/queue/queue.module';
@@ -25,6 +26,10 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    ThrottlerModule.forRoot([
+      { name: 'short', ttl: 60000, limit: 10 },   // 10 req/min for auth endpoints
+      { name: 'long',  ttl: 3600000, limit: 50 },  // 50 req/hr for auth endpoints
+    ]),
     DatabaseModule,
     RedisModule,
     AuthModule,
@@ -43,10 +48,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     HealthModule,
   ],
   providers: [
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })
 export class AppModule {}

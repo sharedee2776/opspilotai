@@ -199,10 +199,12 @@ function IntegrationCard({
   def,
   connected,
   onConnect,
+  canManage,
 }: {
   def: IntegrationDef;
   connected: Integration[];
   onConnect: (type: IntegrationType) => void;
+  canManage: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const isConnected = connected.length > 0;
@@ -235,9 +237,15 @@ function IntegrationCard({
               Soon
             </button>
           ) : def.type === 'slack' ? (
-            <a href="/settings" className="px-3 py-1.5 border border-surface-border text-slate-300 hover:text-white text-xs rounded-lg transition-colors">
-              {isConnected ? 'Settings' : 'Configure →'}
-            </a>
+            canManage ? (
+              <a href="/settings" className="px-3 py-1.5 border border-surface-border text-slate-300 hover:text-white text-xs rounded-lg transition-colors">
+                {isConnected ? 'Settings' : 'Configure →'}
+              </a>
+            ) : isConnected ? (
+              <span className="flex items-center gap-1 text-xs text-green-400 font-medium">
+                <CheckCircle className="w-3 h-3" /> Active
+              </span>
+            ) : null
           ) : isConnected ? (
             <button
               onClick={() => setExpanded((x) => !x)}
@@ -245,13 +253,15 @@ function IntegrationCard({
             >
               Details {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             </button>
-          ) : (
+          ) : canManage ? (
             <button
               onClick={() => onConnect(def.type)}
               className="px-3 py-1.5 bg-brand hover:bg-brand-dark text-white text-xs font-medium rounded-lg transition-colors"
             >
               Connect
             </button>
+          ) : (
+            <span className="text-xs text-slate-600">Not connected</span>
           )}
         </div>
       </div>
@@ -305,16 +315,7 @@ export default function Integrations() {
     enabled: !!organization?.id,
   });
 
-  if (!isAdminOrOwner) {
-    return (
-      <div className="p-6 max-w-2xl mx-auto">
-        <h1 className="text-xl font-bold text-white mb-2">Integrations</h1>
-        <div className="bg-surface-card border border-surface-border rounded-xl p-8 text-center text-slate-400">
-          Only workspace owners and admins can manage integrations.
-        </div>
-      </div>
-    );
-  }
+  // members can view but not manage
 
   const connectedByType = (type: string) =>
     (integrations ?? []).filter((i: Integration) => i.type === type);
@@ -328,7 +329,9 @@ export default function Integrations() {
         <div>
           <h1 className="text-xl font-bold text-white">Integrations</h1>
           <p className="text-slate-400 text-sm mt-0.5">
-            Connect alert sources to start receiving AI-powered incident analysis.
+            {isAdminOrOwner
+              ? 'Connect alert sources to start receiving AI-powered incident analysis.'
+              : 'View connected alert sources. Ask an owner or admin to connect new integrations.'}
           </p>
         </div>
         {totalConnected > 0 && (
@@ -340,7 +343,7 @@ export default function Integrations() {
       </div>
 
       {/* How it works */}
-      {totalConnected === 0 && (
+      {isAdminOrOwner && totalConnected === 0 && (
         <div className="bg-brand/10 border border-brand/20 rounded-xl p-4 mb-6">
           <p className="text-brand-light text-sm font-medium mb-2">How it works</p>
           <div className="grid sm:grid-cols-3 gap-3 text-xs text-slate-400">
@@ -369,13 +372,14 @@ export default function Integrations() {
               def={def}
               connected={connectedByType(def.type)}
               onConnect={setCreateType}
+              canManage={isAdminOrOwner}
             />
           ))}
         </div>
       )}
 
-      {/* Create modal */}
-      {createType && organization && (
+      {/* Create modal — admins/owners only */}
+      {createType && organization && isAdminOrOwner && (
         <CreateModal
           orgId={organization.id}
           defaultType={createType}

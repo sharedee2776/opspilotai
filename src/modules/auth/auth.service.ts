@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   ServiceUnavailableException,
@@ -8,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { DataSource, Repository } from 'typeorm';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { OrganizationMemberEntity, OrganizationRole } from '../../common/entities/organization-member.entity';
@@ -17,6 +19,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { FirebaseAdminService } from './firebase/firebase-admin.service';
 import { FirebaseRegisterDto } from './dto/firebase-auth.dto';
+import { MailService } from './mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -34,6 +37,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
     private readonly firebase: FirebaseAdminService,
+    private readonly mail: MailService,
     config: ConfigService,
   ) {
     this.platformAdminEmail = (config.get<string>('PLATFORM_ADMIN_EMAIL') ?? '').toLowerCase();
@@ -51,12 +55,16 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, this.saltRounds);
     const slug = await this.generateUniqueSlug(dto.organizationName);
+    const verificationToken = randomBytes(32).toString('hex');
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
 
     const result = await this.dataSource.transaction(async (manager) => {
       const user = manager.create(UserEntity, {
         email: dto.email.toLowerCase(),
         name: dto.name,
         passwordHash,
+        verificationToken,
+        verificationExpires,
       });
       const savedUser = await manager.save(user);
 
@@ -84,12 +92,67 @@ export class AuthService {
       role: OrganizationRole.OWNER,
     });
 
+    // Fire-and-forget — don't block registration if email fails
+    this.mail.sendVerificationEmail(result.user.email, result.user.name, verificationToken)
+      .catch(() => {});
+
     return {
       accessToken: token,
       user: this.toPublicUser(result.user),
       organization: result.organization,
       isSuperAdmin: this.isSuperAdmin(result.user.email),
     };
+  }
+
+  async verifyEmail(token: string) {
+    const user = await this.userRepository.findOne({ where: { verificationToken: token } });
+    if (!user || !user.verificationExpires || user.verificationExpires < new Date()) {
+      throw new BadRequestException('Invalid or expired verification link');
+    }
+    await this.userRepository.update(user.id, {
+      emailVerified: true,
+      verificationToken: null,
+      verificationExpires: null,
+    });
+    return { message: 'Email verified successfully' };
+  }
+
+  async resendVerification(userId: string) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
+    if (user.emailVerified) return { message: 'Email already verified' };
+
+    const token = randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await this.userRepository.update(user.id, { verificationToken: token, verificationExpires: expires });
+    await this.mail.sendVerificationEmail(user.email, user.name, token);
+    return { message: 'Verification email sent' };
+  }
+
+  async forgotPassword(email: string) {
+    const user = await this.userRepository.findOne({ where: { email: email.toLowerCase() } });
+    // Always return success to avoid email enumeration
+    if (!user) return { message: 'If that email exists, a reset link has been sent' };
+
+    const token = randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1h
+    await this.userRepository.update(user.id, { resetToken: token, resetExpires: expires });
+    await this.mail.sendPasswordResetEmail(user.email, user.name, token);
+    return { message: 'If that email exists, a reset link has been sent' };
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const user = await this.userRepository.findOne({ where: { resetToken: token } });
+    if (!user || !user.resetExpires || user.resetExpires < new Date()) {
+      throw new BadRequestException('Invalid or expired reset link');
+    }
+    const passwordHash = await bcrypt.hash(newPassword, this.saltRounds);
+    await this.userRepository.update(user.id, {
+      passwordHash,
+      resetToken: null,
+      resetExpires: null,
+    });
+    return { message: 'Password reset successfully' };
   }
 
   async login(dto: LoginDto) {
@@ -299,6 +362,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       name: user.name,
+      emailVerified: user.emailVerified,
       createdAt: user.createdAt,
     };
   }

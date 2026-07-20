@@ -88,9 +88,12 @@ export default function Login() {
 
   async function handleReset(e: FormEvent) {
     e.preventDefault();
-    if (!firebaseAuth) return;
     try {
-      await sendPasswordResetEmail(firebaseAuth, resetEmail || email);
+      if (FIREBASE_ENABLED && firebaseAuth) {
+        await sendPasswordResetEmail(firebaseAuth, resetEmail || email);
+      } else {
+        await authApi.forgotPassword(resetEmail || email);
+      }
       setResetSent(true);
     } catch {
       setError('Could not send reset email. Please check the address.');

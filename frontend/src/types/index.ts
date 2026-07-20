@@ -4,6 +4,7 @@ export interface User {
   name: string;
   organizationId: string;
   role: 'owner' | 'admin' | 'member';
+  emailVerified?: boolean;
 }
 
 export interface Organization {
